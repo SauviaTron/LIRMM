@@ -1,0 +1,6 @@
+{
+    "port": "COM3",
+    "configuration": "usb=cdc,speed=32,opt=os",
+    "board": "TleraCorp:stm32l0:Gnat-L082CZ",
+    "sketch": "AssetTracker_Gnat.v03d.ino"
+}
