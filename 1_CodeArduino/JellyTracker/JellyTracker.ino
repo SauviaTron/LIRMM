@@ -14,35 +14,39 @@
  * 
  */
 
-#include "src/STM32L0_Custom.h"  // Management of the STM32L082CZ
-#include "RTC.h"      // Use Real Time Clock features
-#include "LIS2DW12.h" // Use accelerometer
-#include "src/GNSS_Custom.h" 
-#include "src/Flash_ReadWrite.h" // Memory
-
+#include "src/STM32L0_Custom.h"   // Management of the STM32L082CZ
+#include "src/RTC_Custom.h"       // Use Real Time Clock features
+#include "LIS2DW12.h"             // Use Accelerometer - LIS2DW12
+#include "src/GNSS_Custom.h"      // Use GPS - MAX M8Q
+#include "src/Flash_ReadWrite.h"  // Use 196kB Flash Memory of the STM32L082CZ 
 
 
 /* >>> What to use ? <<< */
 #define Use_Acc   false 
-#define Use_GPS   true
+#define Use_GPS   false
+
 
 /* >>> STM32 <<< */
-bool STM32_Sleeping = false ;
+bool STM32_Sleeping = false   ;
 float STM32_Temperature_float ; // Updated by the function - void STM32_Temperature( bool Enable_SerialPrint_STM32 )
+
 
 /* >>> BLUE LED <<< */
 #define Blue_LED     10            // Blue led 
 
+
 /* >>> RTC <<< */
-bool RTC_Alarm_Flag = true ;
-int RTC_Timer_count = 0 ;
+bool RTC_Alarm_Flag   = true ;
+int  RTC_Timer_count  = 0    ;
+int  RTC_Timer_Rescue = 100  ; 
+
 
 /* >>> Sensor connection <<< */
 #define I2C_BUS    Wire               // Define the I2C bus (Wire instance) you wish to use
 I2Cdev             i2c_0(&I2C_BUS);   // Instantiate the I2Cdev object and point to the desired I2C bus
 
-/* >>> EEPROM <<< */
 
+/* >>> Flash Memory <<< */
 
 
 /* >>> LIS2DW12 - Accelerometer <<< */
@@ -98,6 +102,7 @@ static const char *fixQualityString[] = { "", "", "/DIFFERENTIAL", "/PRECISE", "
 /* >>> Serial Println <<< */
 bool Enable_SerialPrint_LED   = false   ;
 bool Enable_SerialPrint_STM32 = false   ;
+bool Enable_SerialPrint_RTC   = true    ;
 bool Enable_SerialPrint_Acc   = true    ;
 bool Enable_SerialPrint_GPS   = true    ;
 
@@ -113,8 +118,8 @@ void BlueLED_Config( bool Enable_SerialPrint_LED )  ;
 void BlueLED_ON( bool Enable_SerialPrint_LED ) ;
 void BlueLED_OFF( bool Enable_SerialPrint_LED );
 
-void RTC_Enable( bool Enable_SerialPrint );
-void RTC_Disable( bool Enable_SerialPrint );
+void RTC_Enable( bool Enable_SerialPrint_RTC );
+void RTC_Disable( bool Enable_SerialPrint_RTC );
 void RTC_Alarm_Fct_Wakeup() ;
 
 void I2C_Config( ) ;
@@ -160,6 +165,7 @@ void setup() {
   #endif
 
 
+  /* >>> MAX M8Q - GPS <<< */
   #if( Use_GPS == true )
     GPS_Config( Enable_SerialPrint_GPS ) ;
   #endif
@@ -196,41 +202,9 @@ void loop() {
   Acc_Get_Temperature( Enable_SerialPrint_Acc ) ;
   #endif
 
-  /* >>> EEPROM <<< */
-  /*
-  unsigned long long value = 231232245943999999399999989919929939911 ;
-  for (int i = 0; i < 8; i++) {
-    EEPROM.write(EEPROM_address + i, (value >> (i * 8)) & 0xff);
-  }
-  EEPROM_address = EEPROM_address + 16 ; // 16 * 8 = 128
-
-  Serial.println( (String)"EEPROM_address : " + EEPROM_address ); 
-
-  unsigned long long value1_high = 9223372036854775807ULL; // Partie haute du premier nombre
-  unsigned long long value1_low = 9223372036854775807ULL;  // Partie basse du premier nombre
-  unsigned long long value2_high = 9223372036854775807ULL; // Partie haute du deuxième nombre
-  unsigned long long value2_low = 9223372036854775807ULL;  // Partie basse du deuxième nombre
-
-  // Addition des parties hautes et basses des deux nombres
-  unsigned long long result_low = value1_low + value2_low;
-  unsigned long long result_high = value1_high + value2_high + (result_low < value1_low);
-
-  Serial.print("Result high: ");
-  Serial.println(result_high);
-  Serial.print("Result low: ");
-  Serial.println(result_low);
-
-  */
-
-// https://www.st.com/resource/en/reference_manual/rm0376-ultralowpower-stm32l0x2-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
-// page 62
-
-
   #if( Use_GPS == true )
   GPS_ReadUpdate( Enable_SerialPrint_GPS ) ;
   #endif
-
-  Serial.println("Fin loop") ;
 
   // delay(2000) ;
   STM32_StopMode( Enable_SerialPrint_STM32 ) ;
@@ -274,10 +248,12 @@ void STM32_Temperature( bool Enable_SerialPrint_STM32 ){
 }
 
 // void STM32_Flash_Write( bool Enable_SerialPrint_STM32 ){
-
+//
 //   uint32_t STM32_Flash_address = 0x8021980 ; 
-
+//
 //   /*
+// https://www.st.com/resource/en/reference_manual/rm0376-ultralowpower-stm32l0x2-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+// page 62
 //    * Corresponds to the address on the 1075th page. We start writing from here. We will use 30% of the flash memory. Be careful not to write.
 //    *
 //    * This value corresponds to the address of the 1075th page. The flash memory of the STM32L082CZ is 196kbytes. 
@@ -294,9 +270,9 @@ void STM32_Temperature( bool Enable_SerialPrint_STM32 ){
 //    * .  Code implemented on the card     |     Memory space for data
 //    * 
 //   */
-
+//
 //   if (Message_Pushed_Count < 2 && page_number < 1536) {                          // 32,768 256-byte pages in a 8 MByte flash
-
+//
 //     data_pushed[ Message_Pushed_Count + 0 ] = 2302081615  ; // Date
 //     data_pushed[ Message_Pushed_Count + 1 ] = 43000000    ; // Latitude
 //     data_pushed[ Message_Pushed_Count + 2 ] = 3000000     ; // Longitude
@@ -306,47 +282,47 @@ void STM32_Temperature( bool Enable_SerialPrint_STM32 ){
 //     data_pushed[ Message_Pushed_Count + 6 ] = 002         ; // Acc z
 //     data_pushed[ Message_Pushed_Count + 7 ] = 234         ; // Temperature
 //     data_pushed[ Message_Pushed_Count + 8 ] = 11          ; // LoRa satus
-
+//
 //     Message_Pushed_Count ++ ;
-
+//
 //   }
-
+//
 //   else if (Message_Pushed_Count == 2 && page_number < 1536) { // if 8 number of msg or nbr of pages available
-      
+//  
 //     // Unlocks the flash memory so that it can be programmed
 //     STM32L0.flashUnlock();
-
+//
 //     // Program the data into flash memory
 //     if( STM32L0.flashProgram(address, data_pushed, sizeof(data_pushed) ) ) { Serial.println("Données programmées en mémoire flash avec succès"); } 
 //     else { Serial.println("Echec de la programmation en mémoire flash") ; }
-
+//
 //     // Verrouille la mémoire flash pour éviter tout autre accès
 //     STM32L0.flashLock();
-
+//
 //     // Display a msg for each data wrote into the SPI flash
 //     Serial.println( "STM32 Flash: Data wrote." ) ;
-
+//
 //     Message_Pushed_Count = 0 ; // Reset number of msg put into the page
 //     STM32_Flash_address = STM32_Flash_address + 0x80 ; // Increment the page number
-      
+//     
 //   }
-    
+//  
 //   else { Serial.println("Reached last page of flash memory !"); Serial.println("Data logging stopped!"); } // Max page reached
-
-
+//
+//
 //   // // Unlocks the flash memory so that it can be programmed
 //   // STM32L0.flashUnlock();
-
+//
 //   // // Program the data into flash memory
 //   // if (STM32L0.flashProgram(address, data_pushed, sizeof(datapushed)) {
 //   //   Serial.println("Données programmées en mémoire flash avec succès");
 //   // } else {
 //   //   Serial.println("Echec de la programmation en mémoire flash");
 //   // }
-
+//
 //   // // Verrouille la mémoire flash pour éviter tout autre accès
 //   // STM32L0.flashLock();
-
+//
 // }
 
 
@@ -378,32 +354,37 @@ void BlueLED_OFF( bool Enable_SerialPrint_LED ){
 
 /* >>> RTC Alarm <<< */
 
-void RTC_Enable( bool Enable_SerialPrint ){
+void RTC_Enable( bool Enable_SerialPrint_RTC ){
     // // --- Set the RTC time --- //
   RTC.setAlarmTime(12, 0, 0)                   ; // Setting alarm
   RTC.enableAlarm(RTC.MATCH_Every_10s)         ; // Alarm once per second
   //RTC.enableAlarm(RTC.MATCH_SS)            ; // Alarm once per minute
   RTC.attachInterrupt( RTC_Alarm_Fct_Wakeup ) ; // Alarm interrrupt
-  if(Enable_SerialPrint == true ){ Serial.println("RTC enable.") ; };
+  if(Enable_SerialPrint_RTC == true ){ Serial.println("RTC enable.") ; };
 }
 
-void RTC_Disable( bool Enable_SerialPrint ){
+void RTC_Disable( bool Enable_SerialPrint_RTC ){
   RTC.disableAlarm();
-  if(Enable_SerialPrint == true ){ Serial.println("RTC disable.") ; };
+  if(Enable_SerialPrint_RTC == true ){ Serial.println("RTC disable.") ; };
 }
 
 void RTC_Alarm_Fct_Wakeup() {
 
   //if( STM32L0.resetCause() == 1 ){RTC_Timer_count = RTC_Timer_count + 1 ;}
   RTC_Timer_count = RTC_Timer_count + 1 ;
+  if( RTC_Timer_count == RTC_Timer_Rescue ){
+    Serial.println( "RTC: Rescue mode") ;
+    RTC_Disable( Enable_SerialPrint_RTC ) ;
+    RTC.enableAlarm( RTC.MATCH_Every_2s);
+    RTC.attachInterrupt( RTC_Alarm_Fct_Wakeup ) ;
+  }
 
   // Serial.println( (String)"RTC_Timer_count = " + RTC_Timer_count ) ;
 
-  if( STM32_Sleeping == true ){
-    STM32_WakeUp( Enable_SerialPrint_STM32 ) ; 
-  }
+  if( STM32_Sleeping == true ){ STM32_WakeUp( Enable_SerialPrint_STM32 ) ; }
+
   RTC_Alarm_Flag = true ; // Just set flag when interrupt received, don't try reading data in an interrupt handler
-  //Serial.println("RTC: Flag timer true");
+  
 }
 
 
