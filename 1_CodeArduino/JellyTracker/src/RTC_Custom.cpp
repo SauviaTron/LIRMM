@@ -27,7 +27,7 @@
  */
 
 #include "Arduino.h"
-#include "RTC.h"
+#include "RTC_Custom.h"
 #include "wiring_private.h"
 
 
