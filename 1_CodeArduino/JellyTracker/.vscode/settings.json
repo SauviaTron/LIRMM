@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "stm32l0_rtc.h": "c",
+        "stm32l0_lptim.h": "c"
+    }
+}

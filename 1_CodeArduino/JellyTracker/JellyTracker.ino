@@ -17,7 +17,7 @@
 #include "src/STM32L0_Custom.h"  // Management of the STM32L082CZ
 #include "RTC.h"      // Use Real Time Clock features
 #include "LIS2DW12.h" // Use accelerometer
-#include "GNSS.h"
+#include "src/GNSS_Custom.h" 
 #include "src/Flash_ReadWrite.h" // Memory
 
 
@@ -75,8 +75,6 @@ I2Cdev             i2c_0(&I2C_BUS);   // Instantiate the I2Cdev object and point
 
 /* >>> MAX M8Q - GPS <<< */
 #if( Use_GPS == true )
-
-
 GNSSLocation myLocation;
 GNSSSatellites mySatellites;
 // MAX M8Q GNSS configuration
@@ -84,18 +82,16 @@ GNSSSatellites mySatellites;
 #define pps          4     // 1 Hz fix pulse
 #define GNSS_backup A0     // RTC backup for MAX M8Q
 
-uint16_t Hour = 1, Minute = 1, Second = 1, Millisec, Year = 1, Month = 1, Day = 1;
-uint8_t hours = 12, minutes = 0, seconds = 0, year = 1, month = 1, day = 1;
-uint32_t subSeconds, milliseconds;
+uint16_t GPS_Hour = 1, GPS_Minute = 1, GPS_Second = 1, GPS_Year = 1, GPS_Month = 1, GPS_Day = 1;
+//uint8_t hours = 12, minutes = 0, seconds = 0, year = 1, month = 1, day = 1;
 volatile bool ppsFlag = false, firstSync = false, alarmFlag = true;
 uint16_t count = 0, fixType = 0, fixQuality;
 int32_t latOut, longOut;
 
-float Temperature, Long, Lat, Alt, EHPE;
+float Long, Lat, Alt, EHPE;
 
 static const char *fixTypeString[] = { "NONE", "TIME", "2D", "3D" };
 static const char *fixQualityString[] = { "", "", "/DIFFERENTIAL", "/PRECISE", "/RTK_FIXED", "/RTK_FLOAT", "/ESTIMATED", "/MANUAL", "/SIMULATION" };
-
 #endif
 
 
@@ -411,9 +407,6 @@ void RTC_Alarm_Fct_Wakeup() {
 }
 
 
-void EEPROM_Size( bool Enable_SerialPrint_EEPROM ){
-
-}
 
 /* >>> Sensor connection <<< */
 
@@ -540,24 +533,24 @@ void I2C_Config( ){
 
       Serial.print( (String)"LOCATION: " + fixTypeString[myLocation.fixType()]) ;
 
-      if (GNSS.satellites(mySatellites)){ Serial.print( (String)" - SATELLITES: " + mySatellites.count()) ; }
+      if( GNSS.satellites(mySatellites) ){ Serial.print( (String)" - SATELLITES: " + mySatellites.count()) ; }
 
       if( myLocation.fixType() != GNSSLocation::TYPE_NONE ){
 
-        Hour   = myLocation.hours()   ;
-        Minute = myLocation.minutes() ;
-        Second = myLocation.seconds() ;
-        Year   = myLocation.year()    ;
-        Month  = myLocation.month()   ;
-        Day    = myLocation.day()     ;
+        GPS_Hour   = myLocation.hours()   ;
+        GPS_Minute = myLocation.minutes() ;
+        GPS_Second = myLocation.seconds() ;
+        GPS_Year   = myLocation.year()    ;
+        GPS_Month  = myLocation.month()   ;
+        GPS_Day    = myLocation.day()     ;
         
         Serial.print(fixQualityString[myLocation.fixQuality()]) ; Serial.print(" - ") ;
 
-        Serial.print( Year + (String)"/" + Month + (String)"/" + Day + (String)" " ) ; 
+        Serial.print( GPS_Year + (String)"/" + GPS_Month + (String)"/" + GPS_Day + (String)" " ) ; 
 
-        if(myLocation.hours()   <= 9){ Serial.print("0"); } Serial.print( myLocation.hours()   + (String)":" ); 
-        if(myLocation.minutes() <= 9){ Serial.print("0"); } Serial.print( myLocation.minutes() + (String)":" ); 
-        if(myLocation.seconds() <= 9){ Serial.print("0"); } Serial.print( myLocation.seconds() + (String)" " ); 
+        if( GPS_Hour   <= 9){ Serial.print("0"); } Serial.print( GPS_Hour   + (String)":" ); 
+        if( GPS_Minute <= 9){ Serial.print("0"); } Serial.print( GPS_Minute + (String)":" ); 
+        if( GPS_Second <= 9){ Serial.print("0"); } Serial.print( GPS_Second + (String)" " ); 
 
         // if( myLocation.leapSeconds() != GNSSLocation::LEAP_SECONDS_UNDEFINED) {
         //   Serial.print(" ");
