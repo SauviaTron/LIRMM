@@ -451,30 +451,53 @@ void RTCClass::SyncAlarm()
 
             switch (_alarm_match) {
             case MATCH_ANY: // Every Second
-                _alarm_calendar.year = calendar.year;
-                _alarm_calendar.month = calendar.month;
-                _alarm_calendar.day = calendar.day;
-                _alarm_calendar.hours = calendar.hours;
-                _alarm_calendar.minutes = calendar.minutes;
-                _alarm_calendar.seconds = calendar.seconds;
+                _alarm_calendar.year    = calendar.year     ;
+                _alarm_calendar.month   = calendar.month    ;
+                _alarm_calendar.day     = calendar.day      ;
+                _alarm_calendar.hours   = calendar.hours    ;
+                _alarm_calendar.minutes = calendar.minutes  ;
+                _alarm_calendar.seconds = calendar.seconds  ;
                 break;
-            case MATCH_Every_2s: // Every Second
-                _alarm_calendar.year = calendar.year;
-                _alarm_calendar.month = calendar.month;
-                _alarm_calendar.day = calendar.day;
-                _alarm_calendar.hours = calendar.hours;
-                _alarm_calendar.minutes = calendar.minutes;
-                _alarm_calendar.seconds = calendar.seconds;
+            case MATCH_Every_2s: // Every 2 Second
+                _alarm_calendar.year    = calendar.year     ;
+                _alarm_calendar.month   = calendar.month    ;
+                _alarm_calendar.day     = calendar.day      ;
+                _alarm_calendar.hours   = calendar.hours    ;
+                _alarm_calendar.minutes = calendar.minutes  ;
+                _alarm_calendar.seconds = calendar.seconds  ;
                 break;
-            case MATCH_Every_10s: // Every Second
-                _alarm_calendar.year = calendar.year;
-                _alarm_calendar.month = calendar.month;
-                _alarm_calendar.day = calendar.day;
-                _alarm_calendar.hours = calendar.hours;
-                _alarm_calendar.minutes = calendar.minutes;
-                _alarm_calendar.seconds = calendar.seconds;
+            case MATCH_Every_10s: // Every 10 Second
+                _alarm_calendar.year    = calendar.year     ;
+                _alarm_calendar.month   = calendar.month    ;
+                _alarm_calendar.day     = calendar.day      ;
+                _alarm_calendar.hours   = calendar.hours    ;
+                _alarm_calendar.minutes = calendar.minutes  ;
+                _alarm_calendar.seconds = calendar.seconds  ;
+                break;
+            case MATCH_Every_30s: // Every 30 Second
+                _alarm_calendar.year    = calendar.year     ;
+                _alarm_calendar.month   = calendar.month    ;
+                _alarm_calendar.day     = calendar.day      ;
+                _alarm_calendar.hours   = calendar.hours    ;
+                _alarm_calendar.minutes = calendar.minutes  ;
+                _alarm_calendar.seconds = calendar.seconds  ;
                 break;
             case MATCH_SS:  // Every Minute
+                _alarm_calendar.year = calendar.year;
+                _alarm_calendar.month = calendar.month;
+                _alarm_calendar.day = calendar.day;
+                _alarm_calendar.hours = calendar.hours;
+                _alarm_calendar.minutes = calendar.minutes;
+                break;
+            case MATCH_Every_90s: // Every 90 Second
+                _alarm_calendar.year    = calendar.year     ;
+                _alarm_calendar.month   = calendar.month    ;
+                _alarm_calendar.day     = calendar.day      ;
+                _alarm_calendar.hours   = calendar.hours    ;
+                _alarm_calendar.minutes = calendar.minutes  ;
+                _alarm_calendar.seconds = calendar.seconds  ;
+                break;
+            case MATCH_Every_2min:  // Every 2Minute
                 _alarm_calendar.year = calendar.year;
                 _alarm_calendar.month = calendar.month;
                 _alarm_calendar.day = calendar.day;
@@ -536,7 +559,7 @@ void RTCClass::AdvanceAlarm()
 	_alarm_calendar.seconds = calendar.seconds;
         stm32l0_rtc_calendar_offset(&_alarm_calendar, 1, 0, &_alarm_calendar);
         break;
-    case MATCH_Every_2s: // Every Second
+    case MATCH_Every_2s: // Every 2Second
 	_alarm_calendar.year = calendar.year;
 	_alarm_calendar.month = calendar.month;
 	_alarm_calendar.day = calendar.day;
@@ -545,7 +568,7 @@ void RTCClass::AdvanceAlarm()
 	_alarm_calendar.seconds = calendar.seconds;
         stm32l0_rtc_calendar_offset(&_alarm_calendar, 2, 0, &_alarm_calendar);
         break;
-    case MATCH_Every_10s: // Every Second
+    case MATCH_Every_10s: // Every 10Second
 	_alarm_calendar.year = calendar.year;
 	_alarm_calendar.month = calendar.month;
 	_alarm_calendar.day = calendar.day;
@@ -554,6 +577,15 @@ void RTCClass::AdvanceAlarm()
 	_alarm_calendar.seconds = calendar.seconds;
         stm32l0_rtc_calendar_offset(&_alarm_calendar, 10, 0, &_alarm_calendar);
         break;
+    case MATCH_Every_30s: // Every 30Second
+        _alarm_calendar.year    = calendar.year     ;
+        _alarm_calendar.month   = calendar.month    ;
+        _alarm_calendar.day     = calendar.day      ;
+        _alarm_calendar.hours   = calendar.hours    ;
+        _alarm_calendar.minutes = calendar.minutes  ;
+        _alarm_calendar.seconds = calendar.seconds  ;
+        stm32l0_rtc_calendar_offset(&_alarm_calendar, 30, 0, &_alarm_calendar);
+        break;
     case MATCH_SS:  // Every Minute
 	_alarm_calendar.year = calendar.year;
 	_alarm_calendar.month = calendar.month;
@@ -561,6 +593,23 @@ void RTCClass::AdvanceAlarm()
 	_alarm_calendar.hours = calendar.hours;
 	_alarm_calendar.minutes = calendar.minutes;
         stm32l0_rtc_calendar_offset(&_alarm_calendar, 60, 0, &_alarm_calendar);
+        break;
+    case MATCH_Every_90s: // Every 90Second
+        _alarm_calendar.year    = calendar.year     ;
+        _alarm_calendar.month   = calendar.month    ;
+        _alarm_calendar.day     = calendar.day      ;
+        _alarm_calendar.hours   = calendar.hours    ;
+        _alarm_calendar.minutes = calendar.minutes  ;
+        _alarm_calendar.seconds = calendar.seconds  ;
+        stm32l0_rtc_calendar_offset(&_alarm_calendar, 90, 0, &_alarm_calendar);
+        break;
+    case MATCH_Every_2min: // Every Second
+        _alarm_calendar.year    = calendar.year     ;
+        _alarm_calendar.month   = calendar.month    ;
+        _alarm_calendar.day     = calendar.day      ;
+        _alarm_calendar.hours   = calendar.hours    ;
+        _alarm_calendar.minutes = calendar.minutes  ;
+        stm32l0_rtc_calendar_offset(&_alarm_calendar, 120, 0, &_alarm_calendar);
         break;
     case MATCH_MMSS: // Every Hour
 	_alarm_calendar.year = calendar.year;

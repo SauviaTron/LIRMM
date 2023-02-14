@@ -35,15 +35,18 @@
 class RTCClass {
 public:
     enum AlarmMatch: uint8_t {
-        MATCH_ANY          = 0,      // Every Second
-        MATCH_Every_2s     = 1,      // Every 2 seconds
-        MATCH_Every_10s    = 2,      // Every 2 seconds
-        MATCH_SS           = 3,      // Every Minute
-        MATCH_MMSS         = 4,      // Every Hour
-        MATCH_HHMMSS       = 5,      // Every Day
-        MATCH_DHHMMSS      = 6,      // Every Month
-        MATCH_MMDDHHMMSS   = 7,      // Every Year
-        MATCH_YYMMDDHHMMSS = 8,      // Once, on a specific date and a specific time
+        MATCH_ANY          =  0,      // Every Second
+        MATCH_Every_2s     =  1,      // Every 02 seconds
+        MATCH_Every_10s    =  2,      // Every 10 seconds
+        MATCH_Every_30s    =  3,      // Every 30 seconds
+        MATCH_SS           =  4,      // Every Minute
+        MATCH_Every_90s    =  5,      // Every 90 seconds
+        MATCH_Every_2min   =  6,      // Every 2min
+        MATCH_MMSS         =  7,      // Every Hour
+        MATCH_HHMMSS       =  8,      // Every Day
+        MATCH_DHHMMSS      =  9,      // Every Month
+        MATCH_MMDDHHMMSS   = 10,      // Every Year
+        MATCH_YYMMDDHHMMSS = 11,      // Once, on a specific date and a specific time
     };
 
     RTCClass();

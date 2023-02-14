@@ -210,7 +210,11 @@ void loop() {
   #endif
 
   #if( Use_GPS == true )
+  RTC_Disable( true ) ;
+  GPS_ON( Enable_SerialPrint_GPS ) ;
   GPS_ReadUpdate( Enable_SerialPrint_GPS ) ;
+  GPS_OFF( Enable_SerialPrint_GPS ) ;
+  RTC_Enable( true ) ;
   #endif
 
   // delay(2000) ;
@@ -364,7 +368,7 @@ void BlueLED_OFF( bool Enable_SerialPrint_LED ){
 void RTC_Enable( bool Enable_SerialPrint_RTC ){
     // // --- Set the RTC time --- //
   RTC.setAlarmTime(12, 0, 0)                   ; // Setting alarm
-  RTC.enableAlarm(RTC.MATCH_Every_10s)         ; // Alarm once per second
+  RTC.enableAlarm(RTC.MATCH_Every_30s)         ; // Alarm once per second
   //RTC.enableAlarm(RTC.MATCH_SS)            ; // Alarm once per minute
   RTC.attachInterrupt( RTC_Alarm_Fct_Wakeup ) ; // Alarm interrrupt
   if(Enable_SerialPrint_RTC == true ){ Serial.println("RTC enable.") ; };
@@ -529,7 +533,7 @@ void I2C_Config( ){
   void GPS_ReadUpdate( bool Enable_SerialPrint_GPS ){
 
     int now = millis() ;
-    while( (millis()-now) <= 60000 ){
+    while( (millis()-now) <= 10000 ){
 
     if( GNSS.location(myLocation) ){
 
