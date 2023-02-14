@@ -23,7 +23,7 @@
 
 /* >>> What to use ? <<< */
 #define Use_Acc   false 
-#define Use_GPS   false
+#define Use_GPS   true
 
 
 /* >>> STM32 <<< */
@@ -96,6 +96,8 @@ float Long, Lat, Alt, EHPE;
 
 static const char *fixTypeString[] = { "NONE", "TIME", "2D", "3D" };
 static const char *fixQualityString[] = { "", "", "/DIFFERENTIAL", "/PRECISE", "/RTK_FIXED", "/RTK_FLOAT", "/ESTIMATED", "/MANUAL", "/SIMULATION" };
+
+unsigned long previousMillis = 0 ;
 #endif
 
 
@@ -131,8 +133,12 @@ void I2C_Config( ) ;
 #endif
 
 #if( Use_GPS == true )
-  void GPS_Config( bool Enable_SerialPrint_GPS ) ;
-  void GPS_ReadUpdate( bool Enable_SerialPrint_GPS ) ;
+  void GPS_Config( bool Enable_SerialPrint_GPS );
+  void GPS_ON( bool Enable_SerialPrint_GPS );
+  void GPS_OFF( bool Enable_SerialPrint_GPS );
+  void GPS_ReadUpdate( bool Enable_SerialPrint_GPS );
+  void GPS_First_Fix( bool Enable_SerialPrint_GPS );
+
 #endif
 
 // —————————————————————————————————————————————————————————————————————————————————————————————— //
@@ -167,7 +173,8 @@ void setup() {
 
   /* >>> MAX M8Q - GPS <<< */
   #if( Use_GPS == true )
-    GPS_Config( Enable_SerialPrint_GPS ) ;
+  GPS_Config( Enable_SerialPrint_GPS ) ;
+  GPS_First_Fix( Enable_SerialPrint_GPS ) ;
   #endif
 
 
@@ -508,7 +515,21 @@ void I2C_Config( ){
 
   }
 
+  void GPS_ON( bool Enable_SerialPrint_GPS ){
+    GNSS.resume();
+    while (GNSS.busy()) { }                                     // Wait for set to complete
+    if( Enable_SerialPrint_GPS == true ){ Serial.println("GPS state: ON"); }
+  }
+
+  void GPS_OFF( bool Enable_SerialPrint_GPS ){
+    GNSS.suspend() ;
+    if( Enable_SerialPrint_GPS == true ){ Serial.println("GPS state: OFF"); }
+  } 
+
   void GPS_ReadUpdate( bool Enable_SerialPrint_GPS ){
+
+    int now = millis() ;
+    while( (millis()-now) <= 60000 ){
 
     if( GNSS.location(myLocation) ){
 
@@ -549,18 +570,33 @@ void I2C_Config( ){
           Serial.print("- Coord: ");
           Serial.print(Lat, 7); Serial.print(","); Serial.print(Long, 7); Serial.print(","); Serial.print(Alt, 3);
           Serial.print(" - EHPE: "); Serial.print(EHPE, 3) ; 
-          Serial.print(" - SATELLITES fixed: "); Serial.print(myLocation.satellites());
-          Serial.println();
+          Serial.print(" - SATELLITES fixed: "); Serial.println(myLocation.satellites());
 
         } // if( myLocation.fixType() != GNSSLocation::TYPE_TIME )
 
       } // if( myLocation.fixType() != GNSSLocation::TYPE_NONE )
 
-      Serial.println();
-
     } // if( GNSS.location(myLocation) )
 
+    } //while( (millis()-now) <= 60000 )
+
   }
+  
+  void GPS_First_Fix( bool Enable_SerialPrint_GPS ){
+    
+    EHPE = 999.99f ;
+
+    while( EHPE >= 150.0 ){ // Waiting to have a "good" EHPE 
+
+      EHPE = 999.99f ;
+
+      GPS_ReadUpdate( Enable_SerialPrint_GPS ) ;
+
+    } // while( EHPE >= 150.0 )
+    
+    Serial.println("Fix GPS done.") ;
+
+  } 
 
 #endif
 
