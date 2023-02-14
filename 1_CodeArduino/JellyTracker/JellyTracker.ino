@@ -103,7 +103,7 @@ unsigned long previousMillis = 0 ;
 
 /* >>> Serial Println <<< */
 bool Enable_SerialPrint_LED   = false   ;
-bool Enable_SerialPrint_STM32 = false   ;
+bool Enable_SerialPrint_STM32 = true   ;
 bool Enable_SerialPrint_RTC   = true    ;
 bool Enable_SerialPrint_Acc   = true    ;
 bool Enable_SerialPrint_GPS   = true    ;
@@ -120,6 +120,7 @@ void BlueLED_Config( bool Enable_SerialPrint_LED )  ;
 void BlueLED_ON( bool Enable_SerialPrint_LED ) ;
 void BlueLED_OFF( bool Enable_SerialPrint_LED );
 
+void RTC_Config( bool Enable_SerialPrint_RTC );
 void RTC_Enable( bool Enable_SerialPrint_RTC );
 void RTC_Disable( bool Enable_SerialPrint_RTC );
 void RTC_Alarm_Fct_Wakeup() ;
@@ -157,8 +158,7 @@ void setup() {
   BlueLED_Config( Enable_SerialPrint_LED ) ;
 
 
-  /* >>> RTC <<< */
-  RTC_Enable( true ) ;
+
 
   I2C_Config( ) ;
 
@@ -176,6 +176,10 @@ void setup() {
   GPS_Config( Enable_SerialPrint_GPS ) ;
   GPS_First_Fix( Enable_SerialPrint_GPS ) ;
   #endif
+
+  /* >>> RTC <<< */
+  RTC_Config( Enable_SerialPrint_RTC ) ;
+  RTC_Enable( Enable_SerialPrint_RTC ) ;
 
 
   delay(5000) ;
@@ -200,25 +204,30 @@ void loop() {
 
 //  delay(500) ;
 
-  Serial.println(".") ;
-  Serial.println("Your program") ;
-  STM32_Temperature( Enable_SerialPrint_STM32 ) ;
+   if( RTC_Alarm_Flag == true ){
+      RTC_Alarm_Flag = false;
 
-  #if( Use_Acc == true )
-  Acc_Get_XYZ_Data( Enable_SerialPrint_Acc ) ;
-  Acc_Get_Temperature( Enable_SerialPrint_Acc ) ;
-  #endif
+	  	Serial.println(">>> Your program <<<");
+      
+	  	STM32_Temperature(Enable_SerialPrint_STM32);
 
-  #if( Use_GPS == true )
-  RTC_Disable( true ) ;
-  GPS_ON( Enable_SerialPrint_GPS ) ;
-  GPS_ReadUpdate( Enable_SerialPrint_GPS ) ;
-  GPS_OFF( Enable_SerialPrint_GPS ) ;
-  RTC_Enable( true ) ;
-  #endif
+      #if (Use_Acc == true)
+	   Acc_Get_XYZ_Data(Enable_SerialPrint_Acc);
+	   Acc_Get_Temperature(Enable_SerialPrint_Acc);
+      #endif
 
-  // delay(2000) ;
-  STM32_StopMode( Enable_SerialPrint_STM32 ) ;
+	   #if (Use_GPS == true)
+      RTC_Disable(Enable_SerialPrint_RTC); 		delay(100);
+      GPS_ON(Enable_SerialPrint_GPS); 			   delay(100);
+      GPS_ReadUpdate(Enable_SerialPrint_GPS);   delay(100);
+      GPS_OFF(Enable_SerialPrint_GPS); 			delay(100);
+      RTC_Enable(Enable_SerialPrint_RTC);
+      #endif
+
+   } // if( RTC_Alarm_Flag == true )
+
+   // delay(2000) ;
+   STM32_StopMode( Enable_SerialPrint_STM32 ) ;
   
 }
 
@@ -236,7 +245,7 @@ void STM32_WakeUp( bool Enable_SerialPrint_STM32 ){
 
   STM32_Sleeping = false ; // Setting the flag
     
-  if( Enable_SerialPrint_STM32 == true ){ Serial.println("STM32 : STM32_WakeUp"); } // WakeUp msg
+  if( Enable_SerialPrint_STM32 == true ){ Serial.println(" ") ; Serial.println("STM32 - STM32_WakeUp"); } // WakeUp msg
 
 }
 
@@ -244,7 +253,7 @@ void STM32_StopMode( bool Enable_SerialPrint_STM32 ){
 
   STM32_Sleeping = true ; // Setting the flag
     
-  if( Enable_SerialPrint_STM32 == true ){ Serial.println("STM32 : STM32_StopMode"); } // Last msg
+  if( Enable_SerialPrint_STM32 == true ){ Serial.println("STM32 - STM32_StopMode"); } // Last msg
 
   STM32L0.stop() ; // Stop Mode
 
@@ -254,7 +263,7 @@ void STM32_Temperature( bool Enable_SerialPrint_STM32 ){
 
   STM32_Temperature_float = STM32L0.getTemperature() ;
 
-  if( Enable_SerialPrint_STM32 == true ){ Serial.println( (String)"STM32 : STM32_Temperature : " + STM32_Temperature_float + "°" ); }
+  if( Enable_SerialPrint_STM32 == true ){ Serial.println( (String)"STM32 - STM32_Temperature : " + STM32_Temperature_float + "°" ); }
 
 }
 
@@ -365,12 +374,13 @@ void BlueLED_OFF( bool Enable_SerialPrint_LED ){
 
 /* >>> RTC Alarm <<< */
 
-void RTC_Enable( bool Enable_SerialPrint_RTC ){
-    // // --- Set the RTC time --- //
+void RTC_Config( bool Enable_SerialPrint_RTC ){
   RTC.setAlarmTime(12, 0, 0)                   ; // Setting alarm
-  RTC.enableAlarm(RTC.MATCH_Every_30s)         ; // Alarm once per second
-  //RTC.enableAlarm(RTC.MATCH_SS)            ; // Alarm once per minute
   RTC.attachInterrupt( RTC_Alarm_Fct_Wakeup ) ; // Alarm interrrupt
+}
+
+void RTC_Enable( bool Enable_SerialPrint_RTC ){
+  RTC.enableAlarm(RTC.MATCH_SS)         ; // Alarm once per second
   if(Enable_SerialPrint_RTC == true ){ Serial.println("RTC enable.") ; };
 }
 
@@ -540,6 +550,8 @@ void I2C_Config( ){
       Serial.print( (String)"LOCATION: " + fixTypeString[myLocation.fixType()]) ;
 
       if( GNSS.satellites(mySatellites) ){ Serial.print( (String)" - SATELLITES: " + mySatellites.count()) ; }
+
+      if( myLocation.fixType() == GNSSLocation::TYPE_NONE ){ Serial.println( " " ) ; }
 
       if( myLocation.fixType() != GNSSLocation::TYPE_NONE ){
 
