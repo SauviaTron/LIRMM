@@ -42,10 +42,16 @@ int Time_Device_Sleep = 30 ; // - seconds
 /* >>> STM32 <<< */
 bool STM32_Sleeping = false   ;
 float STM32_Temperature_float ; // Updated by the function - void STM32_Temperature( bool Enable_SerialPrint_STM32 )
+float VDDA, VBAT, VBUS ;
 
 
 /* >>> BLUE LED <<< */
 #define Blue_LED     10            // Blue led 
+
+
+/* >>> Battery <<< */
+#define Battery_Pin_ADC     A1 // LiPo battery ADC
+#define Battery_Pin_Monitor  2 // LiPo battery monitor enable
 
 
 /* >>> RTC <<< */
@@ -119,12 +125,13 @@ CayenneLPP myLPP(64) ;
 char buffer[32];
 
 /* >>> Serial Println <<< */
-bool Enable_SerialPrint_LED   = false   ;
-bool Enable_SerialPrint_STM32 = true    ;
-bool Enable_SerialPrint_RTC   = true    ;
-bool Enable_SerialPrint_Acc   = true    ;
-bool Enable_SerialPrint_GPS   = true    ;
-bool Enable_SerialPrint_LoRa  = true    ;
+bool Enable_SerialPrint_STM32   = true    ;
+bool Enable_SerialPrint_LED     = false   ;
+bool Enable_SerialPrint_Battery = true    ;
+bool Enable_SerialPrint_RTC     = true    ;
+bool Enable_SerialPrint_Acc     = true    ;
+bool Enable_SerialPrint_GPS     = true    ;
+bool Enable_SerialPrint_LoRa    = true    ;
 
 
 /* >>> Functions <<< */
@@ -137,6 +144,9 @@ void STM32_Flash_Write( bool Enable_SerialPrint_STM32 ) ;
 void BlueLED_Config( bool Enable_SerialPrint_LED )  ;
 void BlueLED_ON( bool Enable_SerialPrint_LED ) ;
 void BlueLED_OFF( bool Enable_SerialPrint_LED );
+
+void Battery_Config( bool Enable_SerialPrint_Battery );
+void Battery_GetTension(bool Enable_SerialPrint_Battery) ;
 
 void RTC_Config( bool Enable_SerialPrint_RTC );
 void RTC_Enable( bool Enable_SerialPrint_RTC );
@@ -169,56 +179,46 @@ void LoRa_SendPayload( bool Enable_SerialPrint_LoRa ) ;
 //          SETUP()                                                                               //
 // —————————————————————————————————————————————————————————————————————————————————————————————— //
 
-void setup() {
+void setup(){
 
-  STM32L0.wakeup() ;
-  
+  STM32L0.wakeup();
+
   // put your setup code here, to run once:
-  Serial.begin(115200) ; 
-
+  Serial.begin(115200);
 
   /* >>> BLUE LED <<< */
-  BlueLED_Config( Enable_SerialPrint_LED ) ;
+  BlueLED_Config(Enable_SerialPrint_LED);
 
+  /* >>> Battery <<< */
+  Battery_Config(Enable_SerialPrint_Battery);
 
+  /* >>> Sensors connection <<<*/
+  I2C_Config();
 
+  // Info about LoRa
 
-  I2C_Config( ) ;
-
-
-
-    // Info about LoRa
-
-    #if( Use_LoRa == true )
-    LoRa_Config( Enable_SerialPrint_LoRa ); 
-    #endif
-
-
-
-
-
-
-  /* >>> LIS2DW12 - Acc <<< */
-  #if( Use_Acc == true )
-    Acc_Config( Enable_SerialPrint_Acc ) ;
+  #if (Use_LoRa == true)
+  LoRa_Config(Enable_SerialPrint_LoRa);
   #endif
 
+  /* >>> LIS2DW12 - Acc <<< */
+  #if (Use_Acc == true)
+  Acc_Config(Enable_SerialPrint_Acc);
+  #endif
 
   /* >>> MAX M8Q - GPS <<< */
-  #if( Use_GPS == true )
-  GPS_Config( Enable_SerialPrint_GPS ) ;
-  GPS_First_Fix( Enable_SerialPrint_GPS ) ;
+  #if (Use_GPS == true)
+  GPS_Config(Enable_SerialPrint_GPS);
+  GPS_First_Fix(Enable_SerialPrint_GPS);
   #endif
 
   /* >>> RTC <<< */
-  RTC_Config( Enable_SerialPrint_RTC ) ;
-  RTC_Enable( Enable_SerialPrint_RTC ) ;
+  RTC_Config(Enable_SerialPrint_RTC);
+  RTC_Enable(Enable_SerialPrint_RTC);
 
-
-  delay(5000) ;
-
+  delay(5000);
+  
 }
-
 
 // —————————————————————————————————————————————————————————————————————————————————————————————— //
 //          LOOP()                                                                                //
@@ -242,7 +242,8 @@ void loop() {
 
     Serial.println(">>> Your program <<<");
 
-    STM32_Temperature(Enable_SerialPrint_STM32);
+    STM32_Temperature( Enable_SerialPrint_STM32 ) ;
+    Battery_GetTension( Enable_SerialPrint_Battery ) ;
 
     #if (Use_Acc == true)
     Acc_Get_XYZ_Data(Enable_SerialPrint_Acc);
@@ -401,6 +402,30 @@ void BlueLED_OFF( bool Enable_SerialPrint_LED ){
   digitalWrite(Blue_LED, HIGH);
 
   if( Enable_SerialPrint_LED == true ){ Serial.println("LED: OFF") ; }
+
+}
+
+
+/* >>> Battery <<< */
+
+void Battery_Config( bool Enable_SerialPrint_Battery ){
+
+  if( Enable_SerialPrint_Battery == true ){ Serial.println( "Battery: Battery_Config") ; }
+
+  pinMode(Battery_Pin_Monitor, OUTPUT) ;
+  pinMode(Battery_Pin_ADC, INPUT)      ; // set up ADC battery voltage monitor pin
+  analogReadResolution(12)             ; // use 12-bit ADC resolution
+
+}
+
+void Battery_GetTension(bool Enable_SerialPrint_Battery){
+
+  if( Enable_SerialPrint_Battery == true ){ Serial.print( "Battery: Battery_GetTension") ; }
+
+  VDDA = STM32L0.getVDDA();
+  VBAT = 1.27f * VDDA * ((float)analogRead(Battery_Pin_ADC)) / 4096.0f;
+
+  if( Enable_SerialPrint_Battery == true ){ Serial.print( " - ") ; Serial.print(VBAT, 2) ; Serial.println(" V") ; }
 
 }
 
@@ -652,6 +677,7 @@ void I2C_Config( ){
 
 /* >>> LoRa <<< */
 #if( Use_LoRa == true )
+
 void LoRa_Config(bool Enable_SerialPrint_LoRa){
 
     LoRaWAN.getDevEui(buffer, 18); // Get DevEUI
