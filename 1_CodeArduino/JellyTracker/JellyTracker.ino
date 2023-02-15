@@ -14,16 +14,29 @@
  * 
  */
 
-#include "src/STM32L0_Custom.h"   // Management of the STM32L082CZ
-#include "src/RTC_Custom.h"       // Use Real Time Clock features
-#include "LIS2DW12.h"             // Use Accelerometer - LIS2DW12
-#include "src/GNSS_Custom.h"      // Use GPS - MAX M8Q
-#include "src/Flash_ReadWrite.h"  // Use 196kB Flash Memory of the STM32L082CZ 
+#include "src/STM32L0_Custom.h"     // Management of the STM32L082CZ
+#include "src/RTC_Custom.h"         // Use Real Time Clock features
+#include "LIS2DW12.h"               // Use Accelerometer - LIS2DW12
+#include "src/GNSS_Custom.h"        // Use GPS - MAX M8Q
+#include "src/Flash_ReadWrite.h"    // Use 196kB Flash Memory of the STM32L082CZ 
+#include "src/LoRaWAN.h"            // Use LoRaWAN
+#include "src/CayenneLPP/CayenneLPP.h"  // Use Cayenne Low Power Payload
 
 
 /* >>> What to use ? <<< */
-#define Use_Acc   false 
-#define Use_GPS   true
+#define GNAT_L082CZ_  0
+#define Use_Acc       false 
+#define Use_GPS       false
+#define Use_LoRa      true
+
+
+/* >>> LoRa codes <<< */
+#if ( GNAT_L082CZ_ == 0 )
+const char *devEui = "70B3D57ED004E6DC";
+const char *appEui = "0000000000000000";
+const char *appKey = "F1DDBCC3E8DFB001D00462D9232B5096";
+int Time_Device_Sleep = 30 ; // - seconds
+#endif
 
 
 /* >>> STM32 <<< */
@@ -101,12 +114,17 @@ unsigned long previousMillis = 0 ;
 #endif
 
 
+/* >>> LoRa <<< */
+CayenneLPP myLPP(64) ;
+char buffer[32];
+
 /* >>> Serial Println <<< */
 bool Enable_SerialPrint_LED   = false   ;
-bool Enable_SerialPrint_STM32 = true   ;
+bool Enable_SerialPrint_STM32 = true    ;
 bool Enable_SerialPrint_RTC   = true    ;
 bool Enable_SerialPrint_Acc   = true    ;
 bool Enable_SerialPrint_GPS   = true    ;
+bool Enable_SerialPrint_LoRa  = true    ;
 
 
 /* >>> Functions <<< */
@@ -142,6 +160,11 @@ void I2C_Config( ) ;
 
 #endif
 
+#if( Use_LoRa == true )
+void LoRa_Config( bool Enable_SerialPrint_LoRa );
+void LoRa_SendPayload( bool Enable_SerialPrint_LoRa ) ;
+#endif
+
 // —————————————————————————————————————————————————————————————————————————————————————————————— //
 //          SETUP()                                                                               //
 // —————————————————————————————————————————————————————————————————————————————————————————————— //
@@ -161,6 +184,16 @@ void setup() {
 
 
   I2C_Config( ) ;
+
+
+
+    // Info about LoRa
+
+    #if( Use_LoRa == true )
+    LoRa_Config( Enable_SerialPrint_LoRa ); 
+    #endif
+
+
 
 
 
@@ -204,34 +237,34 @@ void loop() {
 
 //  delay(500) ;
 
-   if( RTC_Alarm_Flag == true ){
-      RTC_Alarm_Flag = false;
+  if (RTC_Alarm_Flag == true){
+    RTC_Alarm_Flag = false;
 
-	  	Serial.println(">>> Your program <<<");
-      
-	  	STM32_Temperature(Enable_SerialPrint_STM32);
+    Serial.println(">>> Your program <<<");
 
-      #if (Use_Acc == true)
-	   Acc_Get_XYZ_Data(Enable_SerialPrint_Acc);
-	   Acc_Get_Temperature(Enable_SerialPrint_Acc);
-      #endif
+    STM32_Temperature(Enable_SerialPrint_STM32);
 
-	   #if (Use_GPS == true)
-      RTC_Disable(Enable_SerialPrint_RTC); 		delay(100);
-      GPS_ON(Enable_SerialPrint_GPS); 			   delay(100);
-      GPS_ReadUpdate(Enable_SerialPrint_GPS);   delay(100);
-      GPS_OFF(Enable_SerialPrint_GPS); 			delay(100);
-      RTC_Enable(Enable_SerialPrint_RTC);
-      #endif
+    #if (Use_Acc == true)
+    Acc_Get_XYZ_Data(Enable_SerialPrint_Acc);
+    Acc_Get_Temperature(Enable_SerialPrint_Acc);
+    #endif
 
-   } // if( RTC_Alarm_Flag == true )
+    #if (Use_GPS == true)
+    RTC_Disable(Enable_SerialPrint_RTC); delay(100);
+    GPS_ON(Enable_SerialPrint_GPS); delay(100);
+    GPS_ReadUpdate(Enable_SerialPrint_GPS); delay(100);
+    GPS_OFF(Enable_SerialPrint_GPS); delay(100);
+    RTC_Enable(Enable_SerialPrint_RTC);
+    #endif
 
-   // delay(2000) ;
-   STM32_StopMode( Enable_SerialPrint_STM32 ) ;
-  
+    #if( Use_LoRa == true )
+    LoRa_SendPayload( Enable_SerialPrint_LoRa ) ;
+    #endif
+
+  } // if( RTC_Alarm_Flag == true )
+
+  STM32_StopMode(Enable_SerialPrint_STM32);
 }
-
-
 
 // —————————————————————————————————————————————————————————————————————————————————————————————— //
 //          FUNCTIONS                                                                             //
@@ -617,7 +650,72 @@ void I2C_Config( ){
 #endif
 
 
+/* >>> LoRa <<< */
+#if( Use_LoRa == true )
+void LoRa_Config(bool Enable_SerialPrint_LoRa){
 
+    LoRaWAN.getDevEui(buffer, 18); // Get DevEUI
+
+    // --- Configuration LoRaWAN --- //
+    // Asia AS923 | Australia  AU915 | Europe EU868 | India IN865 | Korea KR920 | US US915 (64 + 8 channels)
+
+    LoRaWAN.begin(EU868);
+    LoRaWAN.setADR(false);
+    LoRaWAN.setDataRate(2); // 0 => SF = 12 | 1 => SF = 11 | 2 => SF 10 ... Careful with the size of the payload
+    LoRaWAN.setTxPower(0);
+    LoRaWAN.setSubBand(1); // 1 for MTCAP, 2 for TT gateways
+
+    LoRaWAN.joinOTAA(appEui, appKey, devEui);
+
+    if (Enable_SerialPrint_LoRa == true){
+      Serial.println((String) "DevEUI: " + devEui);
+      Serial.println((String) "AppEUI: " + appEui);
+      Serial.println((String) "AppKey: " + appKey);
+    }
+
+}
+
+void LoRa_SendPayload( bool Enable_SerialPrint_LoRa ) {
+
+  // --- Send Data to LoRa --- //
+  if( Enable_SerialPrint_LoRa == true ){
+    Serial.println( (String)"LoRaWAN: Busy   " + LoRaWAN.busy() )   ; // Display state of LoRa - 0 for false (= available) - 1 for true (= busy)
+    Serial.println( (String)".        Joined " + LoRaWAN.joined() ) ; // Display LoRa connection - 0 for false (= not joined) - 1 for true (= joined)
+  }
+
+  if ( !LoRaWAN.busy() && LoRaWAN.joined() ) { // if LoRa available (not(0)=1=true) AND LoRa joined then 
+
+    myLPP.reset(); // Reset writing payload
+
+    // // myLPP.addTemperature(1, MS5803_Temperature)     ; // add MS5803_Temperature
+    // // myLPP.addBarometricPressure(2, MS5803_Pressure) ; // add MS5803_Pressure
+    // // myLPP.addTemperature(3, MS5837_Temperature)     ; // add MS5837_Temperature
+    // // myLPP.addBarometricPressure(4, MS5837_Pressure) ; // add MS5837_Pressure
+    // // myLPP.addAnalogInput(5, Battery_Level)          ; // add Battery_Level
+    // // myLPP.addGPS(6, Lat, Long, Alt)                 ; // add GPS
+    // // myLPP.addLuminosity(7, Ambient_Light)           ; // add Ambient light
+    // // myLPP.addLuminosity(8, White_Light)             ; // add White light
+    // // myLPP.addTemperature(9, Temperature_LSM303AGR)  ; // add Temperature_LSM303AGR 
+    // // myLPP.addAccelerometer(10, ax, ay, az)          ; // add Accelerometer
+    // // myLPP.addAccelerometer(11, mx, my, mz)          ; // add Gyrometer   
+    // myLPP.addAnalogInput(5, Battery_Level)          ; // add Battery_Level
+    // myLPP.addGPS(6, Lat, Long, Alt)                 ; // add GPS
+    // myLPP.addPresence(7 , Nb_Satellite)             ; // add Nb Satellite
+    // myLPP.addPresence(8 , GPS_Hour ) ;
+    // myLPP.addPresence(9 , GPS_Minute ) ;
+    // myLPP.addPresence(10 , GPS_Second ) ;
+    // myLPP.addTemperature(11 , STM32_Temperature ) ;
+  
+    // LoRaWAN.sendPacket(myLPP.getBuffer(), myLPP.getSize());
+
+    if( Enable_SerialPrint_LoRa == true ){ Serial.println(".        Msg send") ; } // Display a msg
+
+  } // if ( !LoRaWAN.busy() && LoRaWAN.joined() )
+  else{ if( Enable_SerialPrint_LoRa == true ){ Serial.println(".        Msg not send") ; } } // Display a msg
+
+}
+
+#endif
 
 
 
