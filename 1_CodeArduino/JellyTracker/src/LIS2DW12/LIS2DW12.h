@@ -137,6 +137,13 @@ class LIS2DW12
   void configureFIFO(uint8_t FIFOMode, uint8_t FIFOThreshold);
   uint8_t FIFOsamples();
 
+  void Acc_Config( bool Enable_SerialPrint_Acc ) ;
+  // uint16_t Acc_Get_RawTemperature( bool Enable_SerialPrint_Acc );
+  // float Acc_Get_FloatTemperature( bool Enable_SerialPrint_Acc );
+  void Acc_Get_Temperature( int16_t *LIS2DWS12_Temp_Raw, float *LIS2DWS12_Temperature, bool Enable_SerialPrint_Acc );
+
+  void Acc_Get_XYZ_Data( float *Acc_X , float *Acc_Y, float *Acc_Z, bool Enable_SerialPrint_Acc );
+
   private:
   float _aRes;
   I2Cdev* _i2c_bus;

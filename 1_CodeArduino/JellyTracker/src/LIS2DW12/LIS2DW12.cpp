@@ -14,6 +14,30 @@
 #include "LIS2DW12.h"
 #include "I2CDev.h"
 
+  #define LIS2DW12_intPin1   A4    // interrupt1 pin definitions, wake-up from STANDBY pin
+  #define LIS2DW12_intPin2    3    // interrupt2 pin definitions, data ready or sleep interrupt
+  // Specify sensor parameters //
+  LPMODE   lpMode = LIS2DW12_LP_MODE_1;      // choices are low power modes 1, 2, 3, or 4
+  MODE     mode   = LIS2DW12_MODE_LOW_POWER; // choices are low power, high performance, and one shot modes
+  ODR      odr    = LIS2DW12_ODR_12_5_1_6HZ; //  1.6 Hz in lpMode, max is 200 Hz in LpMode
+  FS       fs     = LIS2DW12_FS_2G;          // choices are 2, 4, 8, or 16 g
+  BW_FILT  bw     = LIS2DW12_BW_FILT_ODR2;   // choices are ODR divided by 2, 4, 10, or 20
+  FIFOMODE fifoMode = BYPASS;                // capture 32 samples of data before wakeup event, about 2 secs at 25 Hz
+  bool lowNoise = false;                     // low noise or lowest power
+  float aRes = 0;         // Sensor data scale in mg/LSB
+  int16_t accelCount[3];  // Stores the 16-bit signed accelerometer sensor output
+  // int16_t LIS2DWS12_Temp_Raw;      // temperature raw count output
+  // float   LIS2DWS12_Temperature;    // Stores the real internal chip temperature in degrees Celsius
+  // float Acc_X, Acc_Y, Acc_Z;       // variables to hold latest sensor data values 
+  float offset[3];        // holds accel bias offsets
+  float stress[3];        // holds results of the self test
+  uint8_t status = 0, wakeSource = 0, FIFOstatus = 0, numFIFOSamples = 0;
+  // Logic flags to keep track of device states
+  volatile bool LIS2DW12_wake_flag = false;
+  volatile bool LIS2DW12_sleep_flag = false;
+  volatile bool InMotion = false;
+
+
 LIS2DW12::LIS2DW12(I2Cdev* i2c_bus)
 {
   _i2c_bus = i2c_bus;
@@ -222,3 +246,112 @@ void LIS2DW12::deactivateNoMotionInterrupt()
   uint8_t temp = _i2c_bus->readByte(LIS2DW12_ADDRESS, LIS2DW12_FIFO_SAMPLES);    // Read FIFO samples register  
   return temp;
   }
+
+void LIS2DW12::Acc_Config( bool Enable_SerialPrint_Acc ){
+
+  pinMode(LIS2DW12_intPin1, INPUT);  // define LIS2DW12 wake and sleep interrupt pins as L082 inputs
+  pinMode(LIS2DW12_intPin2, INPUT);
+
+  // Read the LIS2DW12 Chip ID register, this is a good test of communication
+  Serial.println("LIS2DW12 accelerometer...");
+  byte LIS2DW12_ID = getChipID();  // Read CHIP_ID register for LIS2DW12
+  Serial.print("LIS2DW12 "); Serial.print("I AM "); Serial.print(LIS2DW12_ID, HEX); Serial.print(" I should be "); Serial.println(0x44, HEX);
+  Serial.println(" ");
+  delay(1000); 
+
+  if(LIS2DW12_ID == 0x44) // check if all I2C sensors with WHO_AM_I have acknowledged
+  {
+   Serial.println("LIS2DW12 is online..."); Serial.println(" ");
+   
+   reset();                                                // software reset before initialization
+   delay(100);      
+
+   selfTest(stress);                                       // perform sensor self test
+   Serial.print("x-axis self test = "); Serial.print(stress[0], 1); Serial.println("mg, should be between 70 and 1500 mg");
+   Serial.print("y-axis self test = "); Serial.print(stress[1], 1); Serial.println("mg, should be between 70 and 1500 mg");
+   Serial.print("z-axis self test = "); Serial.print(stress[2], 1); Serial.println("mg, should be between 70 and 1500 mg");
+   delay(1000);                                            // give some time to read the screen
+
+   reset();                                                // software reset before initialization
+   delay(100);                                                     
+
+   aRes = 0.000244f * (1 << fs);                                    // scale resolutions per LSB for the sensor at 14-bit data 
+
+   Serial.println("hold flat and motionless for bias calibration") ;
+   delay(5000);
+   Compensation(fs, odr, mode, lpMode, bw, lowNoise, offset); // quickly estimate offset bias in normal mode
+   Serial.print("x-axis offset = "); Serial.print(offset[0]*1000.0f, 1); Serial.println(" mg");
+   Serial.print("y-axis offset = "); Serial.print(offset[1]*1000.0f, 1); Serial.println(" mg");
+   Serial.print("z-axis offset = "); Serial.print(offset[2]*1000.0f, 1); Serial.println(" mg");
+
+   init(fs, odr, mode, lpMode, bw, lowNoise);               // Initialize sensor in desired mode for application                     
+   configureFIFO(fifoMode, 0x1F); // 32 levels of data
+   delay(1000); // let sensor settle
+   }
+  else 
+  {
+   if(LIS2DW12_ID != 0x44) Serial.println(" LIS2DW12 not functioning!");
+  }
+}
+
+// uint16_t LIS2DW12::Acc_Get_RawTemperature( bool Enable_SerialPrint_Acc ){
+
+//   uint16_t LIS2DWS12_Temp_Raw = readTempData();  // Read the accel chip temperature adc values
+  
+//   if( Enable_SerialPrint_Acc == true ){   
+//   Serial.print("Accel: Raw Temperature ");  Serial.print(LIS2DWS12_Temp_Raw, BIN);  Serial.println("°C"); // Print T values to tenths of s degree C  
+//   }
+
+//   return LIS2DWS12_Temp_Raw ;
+
+// }
+
+// float LIS2DW12::Acc_Get_FloatTemperature( bool Enable_SerialPrint_Acc ){
+
+//   float LIS2DWS12_Temperature =  ((float) readTempData() ) + 25.0f; // 8-bit accel chip temperature in degrees Centigrade
+  
+//   if( Enable_SerialPrint_Acc == true ){   
+//   Serial.print("Accel: Temperature ");  Serial.print(LIS2DWS12_Temperature, 1);  Serial.println("°C"); // Print T values to tenths of s degree C  
+//   }
+
+//   return LIS2DWS12_Temperature ;
+
+// }
+
+void LIS2DW12::Acc_Get_Temperature( int16_t *LIS2DWS12_Temp_Raw, float *LIS2DWS12_Temperature, bool Enable_SerialPrint_Acc ){
+
+  *LIS2DWS12_Temp_Raw = _i2c_bus->readByte(LIS2DW12_ADDRESS, LIS2DW12_OUT_T);    // Read the raw data register 
+  *LIS2DWS12_Temperature =  ((float) readTempData() ) + 25.0f; // 8-bit accel chip temperature in degrees Centigrade
+  
+  if( Enable_SerialPrint_Acc == true ){   
+  Serial.print("Accel: Raw Temperature ");  Serial.print(*LIS2DWS12_Temp_Raw, BIN);  Serial.println("°C"); // Print T values to tenths of s degree C  
+  Serial.print("Accel: Temperature ");  Serial.print(*LIS2DWS12_Temperature, 1);  Serial.println("°C"); // Print T values to tenths of s degree C  
+  }
+
+
+}
+
+void LIS2DW12::Acc_Get_XYZ_Data( float *Acc_X , float *Acc_Y, float *Acc_Z, bool Enable_SerialPrint_Acc ){
+
+  readAccelData(accelCount); // get 14-bit signed accel data
+
+  // Now we'll calculate the accleration value into actual g's
+  *Acc_X = (float)accelCount[0]*aRes - offset[0];  // get actual g value, this depends on scale being set
+  *Acc_Y = (float)accelCount[1]*aRes - offset[1];   
+  *Acc_Z = (float)accelCount[2]*aRes - offset[2]; 
+    
+  if( Enable_SerialPrint_Acc == true ){
+    Serial.print( "Accelerometer : " ) ;
+    Serial.print( "Acc_X = "  ) ; Serial.print((int)1000* (*Acc_X) );  
+    Serial.print( " Acc_Y = " ) ; Serial.print((int)1000* (*Acc_Y) ); 
+    Serial.print( " Acc_Z = " ) ; Serial.print((int)1000* (*Acc_Z) ); 
+    Serial.println(" mg");
+  }
+  
+}
+
+
+
+
+
+
