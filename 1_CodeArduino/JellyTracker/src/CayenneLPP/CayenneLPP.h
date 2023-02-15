@@ -18,6 +18,7 @@
 #define LPP_BAROMETRIC_PRESSURE 115     // 2 bytes 0.1 hPa Unsigned
 #define LPP_GYROMETER           134     // 2 bytes per axis, 0.01 °/s
 #define LPP_GPS                 136     // 3 byte lon/lat 0.0001 °, 3 bytes alt 0.01 meter
+#define LPP_BatteryLevel        105     // 2 byte 
 
 
 // Data ID + Data Type + Data Size
@@ -33,6 +34,7 @@
 #define LPP_BAROMETRIC_PRESSURE_SIZE 4       // 2 bytes 0.1 hPa Unsigned
 #define LPP_GYROMETER_SIZE           8       // 2 bytes per axis, 0.01 °/s
 #define LPP_GPS_SIZE                 11      // 3 byte lon/lat 0.0001 °, 3 bytes alt 0.01 meter
+#define LPP_BatteryLevel_SIZE        4       // 2 bytes
 
 
 class CayenneLPP {
@@ -58,7 +60,9 @@ class CayenneLPP {
         uint8_t addAccelerometer(uint8_t channel, float x, float y, float z);
         uint8_t addBarometricPressure(uint8_t channel, float hpa);
         uint8_t addGyrometer(uint8_t channel, float x, float y, float z);
-        uint8_t addGPS(uint8_t channel, float latitude, float longitude, float meters);
+        uint8_t addGPS(uint8_t channel, float latitude, float longitude);
+
+        uint8_t addBatteryLevel(uint8_t channel, float celsius);
     
     private:
         uint8_t *buffer;

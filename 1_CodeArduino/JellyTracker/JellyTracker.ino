@@ -19,7 +19,7 @@
 #include "LIS2DW12.h"               // Use Accelerometer - LIS2DW12
 #include "src/GNSS_Custom.h"        // Use GPS - MAX M8Q
 #include "src/Flash_ReadWrite.h"    // Use 196kB Flash Memory of the STM32L082CZ 
-#include "src/LoRaWAN.h"            // Use LoRaWAN
+#include "src/LoRaWAN/LoRaWAN.h"            // Use LoRaWAN
 #include "src/CayenneLPP/CayenneLPP.h"  // Use Cayenne Low Power Payload
 
 
@@ -42,7 +42,7 @@ int Time_Device_Sleep = 30 ; // - seconds
 /* >>> STM32 <<< */
 bool STM32_Sleeping = false   ;
 float STM32_Temperature_float ; // Updated by the function - void STM32_Temperature( bool Enable_SerialPrint_STM32 )
-float VDDA, VBAT, VBUS ;
+float VDDA, BatteryLevel, VBUS ;
 
 
 /* >>> BLUE LED <<< */
@@ -121,7 +121,7 @@ unsigned long previousMillis = 0 ;
 
 
 /* >>> LoRa <<< */
-CayenneLPP myLPP(64) ;
+CayenneLPP CayenneLPPayload(64) ;
 char buffer[32];
 
 /* >>> Serial Println <<< */
@@ -217,7 +217,7 @@ void setup(){
   RTC_Enable(Enable_SerialPrint_RTC);
 
   delay(5000);
-  
+
 }
 
 // —————————————————————————————————————————————————————————————————————————————————————————————— //
@@ -423,9 +423,9 @@ void Battery_GetTension(bool Enable_SerialPrint_Battery){
   if( Enable_SerialPrint_Battery == true ){ Serial.print( "Battery: Battery_GetTension") ; }
 
   VDDA = STM32L0.getVDDA();
-  VBAT = 1.27f * VDDA * ((float)analogRead(Battery_Pin_ADC)) / 4096.0f;
+  BatteryLevel = 1.27f * VDDA * ((float)analogRead(Battery_Pin_ADC)) / 4096.0f;
 
-  if( Enable_SerialPrint_Battery == true ){ Serial.print( " - ") ; Serial.print(VBAT, 2) ; Serial.println(" V") ; }
+  if( Enable_SerialPrint_Battery == true ){ Serial.print( " - ") ; Serial.print(BatteryLevel, 2) ; Serial.println(" V") ; }
 
 }
 
@@ -687,7 +687,7 @@ void LoRa_Config(bool Enable_SerialPrint_LoRa){
 
     LoRaWAN.begin(EU868);
     LoRaWAN.setADR(false);
-    LoRaWAN.setDataRate(2); // 0 => SF = 12 | 1 => SF = 11 | 2 => SF 10 ... Careful with the size of the payload
+    LoRaWAN.setDataRate(0); // 0 => SF = 12 | 1 => SF = 11 | 2 => SF 10 ... Careful with the size of the payload
     LoRaWAN.setTxPower(0);
     LoRaWAN.setSubBand(1); // 1 for MTCAP, 2 for TT gateways
 
@@ -711,28 +711,21 @@ void LoRa_SendPayload( bool Enable_SerialPrint_LoRa ) {
 
   if ( !LoRaWAN.busy() && LoRaWAN.joined() ) { // if LoRa available (not(0)=1=true) AND LoRa joined then 
 
-    myLPP.reset(); // Reset writing payload
+    CayenneLPPayload.reset(); // Reset writing payload
 
-    // // myLPP.addTemperature(1, MS5803_Temperature)     ; // add MS5803_Temperature
-    // // myLPP.addBarometricPressure(2, MS5803_Pressure) ; // add MS5803_Pressure
-    // // myLPP.addTemperature(3, MS5837_Temperature)     ; // add MS5837_Temperature
-    // // myLPP.addBarometricPressure(4, MS5837_Pressure) ; // add MS5837_Pressure
-    // // myLPP.addAnalogInput(5, Battery_Level)          ; // add Battery_Level
-    // // myLPP.addGPS(6, Lat, Long, Alt)                 ; // add GPS
-    // // myLPP.addLuminosity(7, Ambient_Light)           ; // add Ambient light
-    // // myLPP.addLuminosity(8, White_Light)             ; // add White light
-    // // myLPP.addTemperature(9, Temperature_LSM303AGR)  ; // add Temperature_LSM303AGR 
-    // // myLPP.addAccelerometer(10, ax, ay, az)          ; // add Accelerometer
-    // // myLPP.addAccelerometer(11, mx, my, mz)          ; // add Gyrometer   
-    // myLPP.addAnalogInput(5, Battery_Level)          ; // add Battery_Level
-    // myLPP.addGPS(6, Lat, Long, Alt)                 ; // add GPS
-    // myLPP.addPresence(7 , Nb_Satellite)             ; // add Nb Satellite
-    // myLPP.addPresence(8 , GPS_Hour ) ;
-    // myLPP.addPresence(9 , GPS_Minute ) ;
-    // myLPP.addPresence(10 , GPS_Second ) ;
-    // myLPP.addTemperature(11 , STM32_Temperature ) ;
+    CayenneLPPayload.addTemperature( 1 , STM32_Temperature_float ) ;
+    CayenneLPPayload.addBatteryLevel( 2 , BatteryLevel ) ;
+    #if( Use_Acc == true )
+    CayenneLPPayload.addTemperature( 3 , LIS2DWS12_Temperature ) ; 
+    CayenneLPPayload.addAccelerometer( 3 , ax, ay, az)          ; // add Accelerometer
+    #endif
+    #if( Use_GPS == true )
+    float GPS_Latitude = 43.123456 ;
+    float GPS_Longitude = 3.123456 ;
+    CayenneLPPayload.addGPS( 4 , GPS_Latitude , GPS_Longitude ) ; 
+    #endif
   
-    // LoRaWAN.sendPacket(myLPP.getBuffer(), myLPP.getSize());
+    LoRaWAN.sendPacket(CayenneLPPayload.getBuffer(), CayenneLPPayload.getSize());
 
     if( Enable_SerialPrint_LoRa == true ){ Serial.println(".        Msg send") ; } // Display a msg
 

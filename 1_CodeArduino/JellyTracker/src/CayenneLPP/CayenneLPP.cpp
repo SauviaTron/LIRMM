@@ -179,27 +179,40 @@ uint8_t CayenneLPP::addGyrometer(uint8_t channel, float x, float y, float z) {
     return cursor;
 }
 
-uint8_t CayenneLPP::addGPS(uint8_t channel, float latitude, float longitude, float meters) {
+uint8_t CayenneLPP::addGPS(uint8_t channel, float latitude, float longitude) {
     if ((cursor + LPP_GPS_SIZE) > maxsize) {
         return 0;
     }
-    int32_t lat = latitude * 10000;
-    int32_t lon = longitude * 10000;
-    int32_t alt = meters * 100;
+    int32_t lat = latitude * 1000000;
+    int32_t lon = longitude * 1000000;
     
     buffer[cursor++] = channel; 
     buffer[cursor++] = LPP_GPS; 
 
+    buffer[cursor++] = lat >> 24; 
     buffer[cursor++] = lat >> 16; 
     buffer[cursor++] = lat >> 8; 
-    buffer[cursor++] = lat; 
+    buffer[cursor++] = lat;
+
+    buffer[cursor++] = lon >> 24; 
     buffer[cursor++] = lon >> 16; 
     buffer[cursor++] = lon >> 8; 
     buffer[cursor++] = lon; 
-    buffer[cursor++] = alt >> 16; 
-    buffer[cursor++] = alt >> 8;
-    buffer[cursor++] = alt;
 
     return cursor;
 }
 
+uint8_t CayenneLPP::addBatteryLevel(uint8_t channel, float celsius) {
+    if ((cursor + LPP_BatteryLevel_SIZE) > maxsize) {
+        return 0;
+    }
+    int16_t val = celsius * 10;
+
+    buffer[cursor++] = channel; 
+    buffer[cursor++] = LPP_BatteryLevel; 
+
+    buffer[cursor++] = val >> 8; 
+    buffer[cursor++] = val; 
+
+    return cursor;
+}
