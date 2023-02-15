@@ -120,7 +120,8 @@ typedef enum  {
 class LIS2DW12
 {
   public: 
-  LIS2DW12(I2Cdev* i2c_bus);
+  LIS2DW12(I2Cdev*);
+  ~LIS2DW12();                                                                                                                     // Class destructor for durable instances
   uint8_t getChipID();
   void init(uint8_t fs, uint8_t odr, uint8_t mode, uint8_t lpMode, uint8_t bw, bool lowNoise);
   void Compensation(uint8_t fs, uint8_t odr, uint8_t mode, uint8_t lpMode, uint8_t bw, bool lowNoise, float * offset);

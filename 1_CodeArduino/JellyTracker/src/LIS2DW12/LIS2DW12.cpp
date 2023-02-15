@@ -43,6 +43,10 @@ LIS2DW12::LIS2DW12(I2Cdev* i2c_bus)
   _i2c_bus = i2c_bus;
 }
 
+LIS2DW12::~LIS2DW12()                                                                                                                            // Class destructor
+{
+}
+
 
 uint8_t LIS2DW12::getChipID()
 {
