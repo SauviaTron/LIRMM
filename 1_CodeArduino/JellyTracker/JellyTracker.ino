@@ -24,9 +24,9 @@
 
 /* >>> What to use ? <<< */
 #define GNAT_L082CZ_  0
-#define Use_Acc       true 
+#define Use_Acc       false 
 #define Use_GPS       false
-#define Use_LoRa      false
+#define Use_LoRa      true
 
 
 
@@ -175,7 +175,7 @@ void RTC_Alarm_Fct_Wakeup() ;
 #endif
 
 #if( Use_LoRa == true )
-void LoRa_Config( bool Enable_SerialPrint_LoRa );
+// void LoRa_Config( bool Enable_SerialPrint_LoRa );
 void LoRa_SendPayload( bool Enable_SerialPrint_LoRa ) ;
 #endif
 
@@ -200,7 +200,8 @@ void setup(){
   // Info about LoRa
 
   #if (Use_LoRa == true)
-  LoRa_Config(Enable_SerialPrint_LoRa);
+  LoRaWAN.Config_And_JoinOTAA( devEui, appEui, appKey,  Enable_SerialPrint_LoRa );
+  // LoRa_Config(Enable_SerialPrint_LoRa);
   #endif
 
   /* >>> LIS2DW12 - Acc <<< */
@@ -476,12 +477,12 @@ void RTC_Alarm_Fct_Wakeup() {
 /* >>> Sensor connection <<< */
 
 // void I2C_Config( int I2C_Frequency ){
-
+//
 //     /* initialize two wire bus */
 //   I2C_BUS.begin();                // Set master mode, default on SDA/SCL for STM32L0
 //   I2C_BUS.setClock(400000);       // I2C frequency at 400 kHz
 //   delay(1000);
-
+//
 //   Serial.println("Scan for I2C devices:");
 //   i2c_0.I2Cscan();                // should detect LIS2DW12 at 0x19
 //   delay(1000);
@@ -490,44 +491,44 @@ void RTC_Alarm_Fct_Wakeup() {
 
 /* >>> LIS2DW12 - Acc <<< */
 // #if( Use_Acc == true )
-
+//
 //   void Acc_Config( bool Enable_SerialPrint_Acc ){
-
+//
 //   pinMode(LIS2DW12_intPin1, INPUT);  // define LIS2DW12 wake and sleep interrupt pins as L082 inputs
 //   pinMode(LIS2DW12_intPin2, INPUT);
-
+//
 //   // Read the LIS2DW12 Chip ID register, this is a good test of communication
 //   Serial.println("LIS2DW12 accelerometer...");
 //   byte LIS2DW12_ID = LIS2DW12.getChipID();  // Read CHIP_ID register for LIS2DW12
 //   Serial.print("LIS2DW12 "); Serial.print("I AM "); Serial.print(LIS2DW12_ID, HEX); Serial.print(" I should be "); Serial.println(0x44, HEX);
 //   Serial.println(" ");
 //   delay(1000); 
-
+//
 //   if(LIS2DW12_ID == 0x44) // check if all I2C sensors with WHO_AM_I have acknowledged
 //   {
 //    Serial.println("LIS2DW12 is online..."); Serial.println(" ");
-   
+//  
 //    LIS2DW12.reset();                                                // software reset before initialization
 //    delay(100);      
-
+//
 //    LIS2DW12.selfTest(stress);                                       // perform sensor self test
 //    Serial.print("x-axis self test = "); Serial.print(stress[0], 1); Serial.println("mg, should be between 70 and 1500 mg");
 //    Serial.print("y-axis self test = "); Serial.print(stress[1], 1); Serial.println("mg, should be between 70 and 1500 mg");
 //    Serial.print("z-axis self test = "); Serial.print(stress[2], 1); Serial.println("mg, should be between 70 and 1500 mg");
 //    delay(1000);                                                     // give some time to read the screen
-
+//
 //    LIS2DW12.reset();                                                // software reset before initialization
 //    delay(100);                                                     
-
+//
 //    aRes = 0.000244f * (1 << fs);                                    // scale resolutions per LSB for the sensor at 14-bit data 
-
+//
 //    Serial.println("hold flat and motionless for bias calibration");
 //    delay(5000);
 //    LIS2DW12.Compensation(fs, odr, mode, lpMode, bw, lowNoise, offset); // quickly estimate offset bias in normal mode
 //    Serial.print("x-axis offset = "); Serial.print(offset[0]*1000.0f, 1); Serial.println(" mg");
 //    Serial.print("y-axis offset = "); Serial.print(offset[1]*1000.0f, 1); Serial.println(" mg");
 //    Serial.print("z-axis offset = "); Serial.print(offset[2]*1000.0f, 1); Serial.println(" mg");
-
+//
 //    LIS2DW12.init(fs, odr, mode, lpMode, bw, lowNoise);               // Initialize sensor in desired mode for application                     
 //    LIS2DW12.configureFIFO(fifoMode, 0x1F); // 32 levels of data
 //    delay(1000); // let sensor settle
@@ -536,18 +537,18 @@ void RTC_Alarm_Fct_Wakeup() {
 //   {
 //    if(LIS2DW12_ID != 0x44) Serial.println(" LIS2DW12 not functioning!");
 //   }
-
+//
 // }
-
+//
   // void Acc_Get_XYZ_Data( bool Enable_SerialPrint_Acc ){
-
+//
   //   LIS2DW12.readAccelData(accelCount); // get 14-bit signed accel data
-
+//
   //   // Now we'll calculate the accleration value into actual g's
   //   ax = (float)accelCount[0]*aRes - offset[0];  // get actual g value, this depends on scale being set
   //   ay = (float)accelCount[1]*aRes - offset[1];   
   //   az = (float)accelCount[2]*aRes - offset[2]; 
-     
+//     
   //   if( Enable_SerialPrint_Acc == true ){
   //     Serial.print( "Accelerometer : " ) ;
   //     Serial.print( "ax = "  ) ; Serial.print((int)1000*ax);  
@@ -556,16 +557,16 @@ void RTC_Alarm_Fct_Wakeup() {
   //     Serial.println(" mg");
   //   }
   // }
-
+//
   // void Acc_Get_Temperature( bool Enable_SerialPrint_Acc ){
-
+//
   //   LIS2DWS12_Temp_Raw = LIS2DW12.readTempData();  // Read the accel chip temperature adc values
   //   LIS2DWS12_Temperature =  ((float) LIS2DWS12_Temp_Raw) + 25.0f; // 8-bit accel chip temperature in degrees Centigrade
   //   // Print temperature in degrees Centigrade      
   //   Serial.print("Accel temperature is ");  Serial.print(LIS2DWS12_Temperature, 1);  Serial.println(" degrees C"); // Print T values to tenths of s degree C  
-
+//
   // }
-
+//
 // #endif
 
 
@@ -683,28 +684,28 @@ void RTC_Alarm_Fct_Wakeup() {
 /* >>> LoRa <<< */
 #if( Use_LoRa == true )
 
-void LoRa_Config(bool Enable_SerialPrint_LoRa){
-
-    LoRaWAN.getDevEui(buffer, 18); // Get DevEUI
-
-    // --- Configuration LoRaWAN --- //
-    // Asia AS923 | Australia  AU915 | Europe EU868 | India IN865 | Korea KR920 | US US915 (64 + 8 channels)
-
-    LoRaWAN.begin(EU868);
-    LoRaWAN.setADR(false);
-    LoRaWAN.setDataRate(0); // 0 => SF = 12 | 1 => SF = 11 | 2 => SF 10 ... Careful with the size of the payload
-    LoRaWAN.setTxPower(0);
-    LoRaWAN.setSubBand(1); // 1 for MTCAP, 2 for TT gateways
-
-    LoRaWAN.joinOTAA(appEui, appKey, devEui);
-
-    if (Enable_SerialPrint_LoRa == true){
-      Serial.println((String) "DevEUI: " + devEui);
-      Serial.println((String) "AppEUI: " + appEui);
-      Serial.println((String) "AppKey: " + appKey);
-    }
-
-}
+// void LoRa_Config(bool Enable_SerialPrint_LoRa){
+//
+//     LoRaWAN.getDevEui(buffer, 18); // Get DevEUI
+//
+//     // --- Configuration LoRaWAN --- //
+//     // Asia AS923 | Australia  AU915 | Europe EU868 | India IN865 | Korea KR920 | US US915 (64 + 8 channels)
+//
+//     LoRaWAN.begin(EU868);
+//     LoRaWAN.setADR(false);
+//     LoRaWAN.setDataRate(0); // 0 => SF = 12 | 1 => SF = 11 | 2 => SF 10 ... Careful with the size of the payload
+//     LoRaWAN.setTxPower(0);
+//     LoRaWAN.setSubBand(1); // 1 for MTCAP, 2 for TT gateways
+//
+//     LoRaWAN.joinOTAA(appEui, appKey, devEui);
+//
+//     if (Enable_SerialPrint_LoRa == true){
+//       Serial.println((String) "DevEUI: " + devEui);
+//       Serial.println((String) "AppEUI: " + appEui);
+//       Serial.println((String) "AppKey: " + appKey);
+//     }
+//
+// }
 
 void LoRa_SendPayload( bool Enable_SerialPrint_LoRa ) {
 
@@ -722,7 +723,7 @@ void LoRa_SendPayload( bool Enable_SerialPrint_LoRa ) {
     CayenneLPPayload.addBatteryLevel( 2 , BatteryLevel ) ;
     #if( Use_Acc == true )
     CayenneLPPayload.addTemperature( 3 , LIS2DWS12_Temperature ) ; 
-    CayenneLPPayload.addAccelerometer( 3 , ax, ay, az)          ; // add Accelerometer
+    CayenneLPPayload.addAccelerometer( 3 , Acc_X, Acc_Y, Acc_Z)          ; // add Accelerometer
     #endif
     #if( Use_GPS == true )
     float GPS_Latitude = 43.123456 ;

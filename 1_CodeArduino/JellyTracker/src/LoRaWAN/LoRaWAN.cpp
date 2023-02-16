@@ -3568,4 +3568,26 @@ uint8_t LoRaWANClass::__GetBatteryLevel()
     return LoRaWAN._BatteryLevel;
 }
 
+
+void LoRaWANClass::Config_And_JoinOTAA(const char *devEui, const char *appEui, const char *appKey, bool Enable_SerialPrint_LoRa){
+
+    // --- Configuration LoRaWAN --- //
+    // Asia AS923 | Australia  AU915 | Europe EU868 | India IN865 | Korea KR920 | US US915 (64 + 8 channels)
+
+    begin(EU868);
+    setADR(false);
+    setDataRate(0); // 0 => SF = 12 | 1 => SF = 11 | 2 => SF 10 ... Careful with the size of the payload
+    setTxPower(0);
+    setSubBand(1); // 1 for MTCAP, 2 for TT gateways
+
+    joinOTAA(appEui, appKey, devEui);
+
+    if (Enable_SerialPrint_LoRa == true){
+      Serial.println((String) "DevEUI: " + devEui);
+      Serial.println((String) "AppEUI: " + appEui);
+      Serial.println((String) "AppKey: " + appKey);
+    }
+
+}
+
 LoRaWANClass LoRaWAN;

@@ -219,6 +219,8 @@ public:
     int setComplianceTest(bool enable);
 
     int setBatteryLevel(unsigned int level);
+
+    void Config_And_JoinOTAA(const char *devEui, const char *appEui, const char *appKey, bool Enable_SerialPrint_LoRa);
  
 private:
     uint8_t           *_rx_data;
