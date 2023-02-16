@@ -71,6 +71,19 @@ public:
     bool     flashErase(uint32_t address, uint32_t count);
     bool     flashProgram(uint32_t address, const void *data, uint32_t count);
     bool     flashRead( uint32_t address, uint8_t *data, uint32_t count);
+
+    bool STM32_WakeUp( bool Enable_SerialPrint_STM32 );
+    bool STM32_StopMode( bool Enable_SerialPrint_STM32 ) ;
+    float STM32_Temperature( bool Enable_SerialPrint_STM32 );
+
+    void BlueLED_Config( bool Enable_SerialPrint_LED );
+    void BlueLED_ON( bool Enable_SerialPrint_LED );
+    void BlueLED_OFF( bool Enable_SerialPrint_LED );
+
+    void Battery_Config( bool Enable_SerialPrint_Battery );
+    float Battery_GetTension(bool Enable_SerialPrint_Battery);
+
+
 };
 
 extern STM32L0Class STM32L0;

@@ -14,10 +14,10 @@
  * 
  */
 
-#include "src/STM32L0_Custom.h"     // Management of the STM32L082CZ
+#include "src/STM32L0/STM32L0_Custom.h"     // Management of the STM32L082CZ
 #include "src/RTC_Custom.h"         // Use Real Time Clock features
 #include "src/GNSS/GNSS_Custom.h"        // Use GPS - MAX M8Q
-#include "src/Flash_ReadWrite.h"    // Use 196kB Flash Memory of the STM32L082CZ 
+#include "src/STM32L0/Flash_ReadWrite.h"    // Use 196kB Flash Memory of the STM32L082CZ 
 #include "src/LoRaWAN/LoRaWAN.h"            // Use LoRaWAN
 #include "src/CayenneLPP/CayenneLPP.h"  // Use Cayenne Low Power Payload
 
@@ -42,16 +42,17 @@ int Time_Device_Sleep = 30 ; // - seconds
 /* >>> STM32 <<< */
 bool STM32_Sleeping = false   ;
 float STM32_Temperature_float ; // Updated by the function - void STM32_Temperature( bool Enable_SerialPrint_STM32 )
-float VDDA, BatteryLevel, VBUS ;
+// float VDDA, BatteryTension, VBUS ;
+float BatteryTension ;
 
 
-/* >>> BLUE LED <<< */
-#define Blue_LED     10            // Blue led 
+// /* >>> BLUE LED <<< */
+// #define Blue_LED     10            // Blue led 
 
 
-/* >>> Battery <<< */
-#define Battery_Pin_ADC     A1 // LiPo battery ADC
-#define Battery_Pin_Monitor  2 // LiPo battery monitor enable
+// /* >>> Battery <<< */
+// #define Battery_Pin_ADC     A1 // LiPo battery ADC
+// #define Battery_Pin_Monitor  2 // LiPo battery monitor enable
 
 
 /* >>> RTC <<< */
@@ -144,15 +145,14 @@ bool Enable_SerialPrint_LoRa    = true    ;
 
 void STM32_WakeUp( bool Enable_SerialPrint_STM32 ) ;
 void STM32_StopMode( bool Enable_SerialPrint_STM32 ) ;
-void STM32_Temperature( bool Enable_SerialPrint_STM32 ) ;
-void STM32_Flash_Write( bool Enable_SerialPrint_STM32 ) ;
+float STM32_Temperature( bool Enable_SerialPrint_STM32 ) ;
 
 void BlueLED_Config( bool Enable_SerialPrint_LED )  ;
 void BlueLED_ON( bool Enable_SerialPrint_LED ) ;
 void BlueLED_OFF( bool Enable_SerialPrint_LED );
 
 void Battery_Config( bool Enable_SerialPrint_Battery );
-void Battery_GetTension(bool Enable_SerialPrint_Battery) ;
+float Battery_GetTension(bool Enable_SerialPrint_Battery) ;
 
 void RTC_Config( bool Enable_SerialPrint_RTC );
 void RTC_Enable( bool Enable_SerialPrint_RTC );
@@ -192,10 +192,10 @@ void setup(){
   Serial.begin(115200);
 
   /* >>> BLUE LED <<< */
-  BlueLED_Config(Enable_SerialPrint_LED);
+  STM32L0.BlueLED_Config(Enable_SerialPrint_LED);
 
   /* >>> Battery <<< */
-  Battery_Config(Enable_SerialPrint_Battery);
+  STM32L0.Battery_Config(Enable_SerialPrint_Battery);
 
 
   // Info about LoRa
@@ -231,24 +231,15 @@ void setup(){
 
 void loop() {
   
-// put your main code here, to run repeatedly:
-  
-//  BlueLED_ON( Enable_SerialPrint_LED ) ;
-//  delay(500);
-//  BlueLED_OFF( Enable_SerialPrint_LED ); 
-//  delay(500);
-
 //  Serial.println( (String)"STM32L0.resetCause() : " + STM32L0.resetCause() );
-
-//  delay(500) ;
 
   if (RTC_Alarm_Flag == true){
     RTC_Alarm_Flag = false;
 
     Serial.println(">>> Your program <<<");
 
-    STM32_Temperature( Enable_SerialPrint_STM32 ) ;
-    Battery_GetTension( Enable_SerialPrint_Battery ) ;
+    STM32_Temperature_float = STM32L0.STM32_Temperature( Enable_SerialPrint_STM32 ) ;
+    BatteryTension = STM32L0.Battery_GetTension( Enable_SerialPrint_Battery ) ;
 
     #if (Use_Acc == true)
     LIS2DW12.powerUp( LIS2DW12_ODR_12_5_1_6HZ ) ;
@@ -273,170 +264,227 @@ void loop() {
 
   } // if( RTC_Alarm_Flag == true )
 
-  STM32_StopMode(Enable_SerialPrint_STM32);
+  STM32_Sleeping = STM32L0.STM32_StopMode(Enable_SerialPrint_STM32);
 }
 
 // —————————————————————————————————————————————————————————————————————————————————————————————— //
 //          FUNCTIONS                                                                             //
 // —————————————————————————————————————————————————————————————————————————————————————————————— //
 
-/* >>> STM32 <<< */
+// /* >>> STM32 <<< */
 
-void STM32_WakeUp( bool Enable_SerialPrint_STM32 ){
+// /**
+//  * @brief STM32L0 - Wake-up the microcontroller
+//  *
+//  * @param Enable_SerialPrint_STM32 If true, serial printing is enabled, otherwise disabled.
+//  * 
+//  * @note Set a flag 'STM32_Sleeping' to false
+//  */
+// void STM32_WakeUp( bool Enable_SerialPrint_STM32 ){
 
-  STM32L0.wakeup() ;
+//   STM32L0.wakeup() ;
 
-  STM32_Sleeping = false ; // Setting the flag
+//   STM32_Sleeping = false ; // Setting the flag
     
-  if( Enable_SerialPrint_STM32 == true ){ Serial.println(" ") ; Serial.println("STM32 - STM32_WakeUp"); } // WakeUp msg
+//   if( Enable_SerialPrint_STM32 == true ){ Serial.println(" ") ; Serial.println("STM32 - STM32_WakeUp"); } // WakeUp msg
 
-}
+// }
 
-void STM32_StopMode( bool Enable_SerialPrint_STM32 ){
+// /**
+//  * @brief STM32L0 - Put the microcontroller in stop mode
+//  *
+//  * @param Enable_SerialPrint_STM32 If true, serial printing is enabled, otherwise disabled.
+//  * 
+//  * @note Set a flag 'STM32_Sleeping' to true
+//  * 
+//  * @warning This function must be used with STM32_WakeUp() and a delay(10000) in setup! 
+//  * If not the board may never wake up
+//  */
+// void STM32_StopMode( bool Enable_SerialPrint_STM32 ){
 
-  STM32_Sleeping = true ; // Setting the flag
+//   STM32_Sleeping = true ; // Setting the flag
     
-  if( Enable_SerialPrint_STM32 == true ){ Serial.println("STM32 - STM32_StopMode"); } // Last msg
+//   if( Enable_SerialPrint_STM32 == true ){ Serial.println("STM32 - STM32_StopMode"); } // Last msg
 
-  STM32L0.stop() ; // Stop Mode
+//   STM32L0.stop() ; // Stop Mode
 
-}
+// }
 
-void STM32_Temperature( bool Enable_SerialPrint_STM32 ){
+// /**
+//  * @brief STM32L0 - Get the temperature of the microcontroller
+//  *
+//  * @param Enable_SerialPrint_STM32 If true, serial printing is enabled, otherwise disabled.
+//  * 
+//  * @return float STM32_Temperature_float = STM32L0.getTemperature
+//  */
+// float STM32_Temperature( bool Enable_SerialPrint_STM32 ){
 
-  STM32_Temperature_float = STM32L0.getTemperature() ;
+//   if( Enable_SerialPrint_STM32 == true ){ Serial.println( (String)"STM32 - STM32_Temperature : " + STM32L0.getTemperature() + "°" ); }
 
-  if( Enable_SerialPrint_STM32 == true ){ Serial.println( (String)"STM32 - STM32_Temperature : " + STM32_Temperature_float + "°" ); }
+//   float STM32_Temperature_float = STM32L0.getTemperature() ;
 
-}
+// }
 
-// void STM32_Flash_Write( bool Enable_SerialPrint_STM32 ){
-//
-//   uint32_t STM32_Flash_address = 0x8021980 ; 
-//
-//   /*
-// https://www.st.com/resource/en/reference_manual/rm0376-ultralowpower-stm32l0x2-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
-// page 62
-//    * Corresponds to the address on the 1075th page. We start writing from here. We will use 30% of the flash memory. Be careful not to write.
-//    *
-//    * This value corresponds to the address of the 1075th page. The flash memory of the STM32L082CZ is 196kbytes. 
-//    * It starts at address 0x80000000 and ends at address 0x8020FFFF.  There are 1535 pages, each offering 128bytes per page, i.e. 1024bits per page. 
-//    * So there is a total of 1568kBytes available on the flash. When the code is uploaded, it is stored on the flash and therefore takes up space. 
-//    * For example, it can take up 25% of the flash. So there is 75% unused space. This space can be used to store data.
-//    * 
-//    * In this code, we will use 30% of the flash, which is 460 pages or 58,944Bytes or 471,552bits. 
-//    * To make sure we don't write our data on the code, we start at address 0x8021980 which corresponds to page number 1075. 
-//    * 
-//    * The memory allocation is done as follows:
-//    * 
-//    * 0% –––––––––––––––––––––––––––> 69% | 70% ––––––––––––––––––––> 100%
-//    * .  Code implemented on the card     |     Memory space for data
-//    * 
-//   */
-//
-//   if (Message_Pushed_Count < 2 && page_number < 1536) {                          // 32,768 256-byte pages in a 8 MByte flash
-//
-//     data_pushed[ Message_Pushed_Count + 0 ] = 2302081615  ; // Date
-//     data_pushed[ Message_Pushed_Count + 1 ] = 43000000    ; // Latitude
-//     data_pushed[ Message_Pushed_Count + 2 ] = 3000000     ; // Longitude
-//     data_pushed[ Message_Pushed_Count + 3 ] = 10          ; // Nb of satellites
-//     data_pushed[ Message_Pushed_Count + 4 ] = 000         ; // Acc x
-//     data_pushed[ Message_Pushed_Count + 5 ] = 001         ; // Acc y 
-//     data_pushed[ Message_Pushed_Count + 6 ] = 002         ; // Acc z
-//     data_pushed[ Message_Pushed_Count + 7 ] = 234         ; // Temperature
-//     data_pushed[ Message_Pushed_Count + 8 ] = 11          ; // LoRa satus
-//
-//     Message_Pushed_Count ++ ;
-//
-//   }
-//
-//   else if (Message_Pushed_Count == 2 && page_number < 1536) { // if 8 number of msg or nbr of pages available
-//  
-//     // Unlocks the flash memory so that it can be programmed
-//     STM32L0.flashUnlock();
-//
-//     // Program the data into flash memory
-//     if( STM32L0.flashProgram(address, data_pushed, sizeof(data_pushed) ) ) { Serial.println("Données programmées en mémoire flash avec succès"); } 
-//     else { Serial.println("Echec de la programmation en mémoire flash") ; }
-//
-//     // Verrouille la mémoire flash pour éviter tout autre accès
-//     STM32L0.flashLock();
-//
-//     // Display a msg for each data wrote into the SPI flash
-//     Serial.println( "STM32 Flash: Data wrote." ) ;
-//
-//     Message_Pushed_Count = 0 ; // Reset number of msg put into the page
-//     STM32_Flash_address = STM32_Flash_address + 0x80 ; // Increment the page number
-//     
-//   }
-//  
-//   else { Serial.println("Reached last page of flash memory !"); Serial.println("Data logging stopped!"); } // Max page reached
-//
-//
-//   // // Unlocks the flash memory so that it can be programmed
-//   // STM32L0.flashUnlock();
-//
-//   // // Program the data into flash memory
-//   // if (STM32L0.flashProgram(address, data_pushed, sizeof(datapushed)) {
-//   //   Serial.println("Données programmées en mémoire flash avec succès");
-//   // } else {
-//   //   Serial.println("Echec de la programmation en mémoire flash");
-//   // }
-//
-//   // // Verrouille la mémoire flash pour éviter tout autre accès
-//   // STM32L0.flashLock();
-//
+// // void STM32_Flash_Write( bool Enable_SerialPrint_STM32 ){
+// //
+// //   uint32_t STM32_Flash_address = 0x8021980 ; 
+// //
+// //   /*
+// // https://www.st.com/resource/en/reference_manual/rm0376-ultralowpower-stm32l0x2-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+// // page 62
+// //    * Corresponds to the address on the 1075th page. We start writing from here. We will use 30% of the flash memory. Be careful not to write.
+// //    *
+// //    * This value corresponds to the address of the 1075th page. The flash memory of the STM32L082CZ is 196kbytes. 
+// //    * It starts at address 0x80000000 and ends at address 0x8020FFFF.  There are 1535 pages, each offering 128bytes per page, i.e. 1024bits per page. 
+// //    * So there is a total of 1568kBytes available on the flash. When the code is uploaded, it is stored on the flash and therefore takes up space. 
+// //    * For example, it can take up 25% of the flash. So there is 75% unused space. This space can be used to store data.
+// //    * 
+// //    * In this code, we will use 30% of the flash, which is 460 pages or 58,944Bytes or 471,552bits. 
+// //    * To make sure we don't write our data on the code, we start at address 0x8021980 which corresponds to page number 1075. 
+// //    * 
+// //    * The memory allocation is done as follows:
+// //    * 
+// //    * 0% –––––––––––––––––––––––––––> 69% | 70% ––––––––––––––––––––> 100%
+// //    * .  Code implemented on the card     |     Memory space for data
+// //    * 
+// //   */
+// //
+// //   if (Message_Pushed_Count < 2 && page_number < 1536) {                          // 32,768 256-byte pages in a 8 MByte flash
+// //
+// //     data_pushed[ Message_Pushed_Count + 0 ] = 2302081615  ; // Date
+// //     data_pushed[ Message_Pushed_Count + 1 ] = 43000000    ; // Latitude
+// //     data_pushed[ Message_Pushed_Count + 2 ] = 3000000     ; // Longitude
+// //     data_pushed[ Message_Pushed_Count + 3 ] = 10          ; // Nb of satellites
+// //     data_pushed[ Message_Pushed_Count + 4 ] = 000         ; // Acc x
+// //     data_pushed[ Message_Pushed_Count + 5 ] = 001         ; // Acc y 
+// //     data_pushed[ Message_Pushed_Count + 6 ] = 002         ; // Acc z
+// //     data_pushed[ Message_Pushed_Count + 7 ] = 234         ; // Temperature
+// //     data_pushed[ Message_Pushed_Count + 8 ] = 11          ; // LoRa satus
+// //
+// //     Message_Pushed_Count ++ ;
+// //
+// //   }
+// //
+// //   else if (Message_Pushed_Count == 2 && page_number < 1536) { // if 8 number of msg or nbr of pages available
+// //  
+// //     // Unlocks the flash memory so that it can be programmed
+// //     STM32L0.flashUnlock();
+// //
+// //     // Program the data into flash memory
+// //     if( STM32L0.flashProgram(address, data_pushed, sizeof(data_pushed) ) ) { Serial.println("Données programmées en mémoire flash avec succès"); } 
+// //     else { Serial.println("Echec de la programmation en mémoire flash") ; }
+// //
+// //     // Verrouille la mémoire flash pour éviter tout autre accès
+// //     STM32L0.flashLock();
+// //
+// //     // Display a msg for each data wrote into the SPI flash
+// //     Serial.println( "STM32 Flash: Data wrote." ) ;
+// //
+// //     Message_Pushed_Count = 0 ; // Reset number of msg put into the page
+// //     STM32_Flash_address = STM32_Flash_address + 0x80 ; // Increment the page number
+// //     
+// //   }
+// //  
+// //   else { Serial.println("Reached last page of flash memory !"); Serial.println("Data logging stopped!"); } // Max page reached
+// //
+// //
+// //   // // Unlocks the flash memory so that it can be programmed
+// //   // STM32L0.flashUnlock();
+// //
+// //   // // Program the data into flash memory
+// //   // if (STM32L0.flashProgram(address, data_pushed, sizeof(datapushed)) {
+// //   //   Serial.println("Données programmées en mémoire flash avec succès");
+// //   // } else {
+// //   //   Serial.println("Echec de la programmation en mémoire flash");
+// //   // }
+// //
+// //   // // Verrouille la mémoire flash pour éviter tout autre accès
+// //   // STM32L0.flashLock();
+// //
+// // }
+
+
+// /* >>> BLUE LED <<< */
+
+// /**
+//  * @brief LED - Configure pinMode
+//  *
+//  * @param Enable_SerialPrint_LED If true, serial printing is enabled, otherwise disabled.
+//  *
+//  * @note Turn on the LED when it's done.
+//  */
+// void BlueLED_Config( bool Enable_SerialPrint_LED ){
+ 
+//   pinMode(Blue_LED, OUTPUT);      
+//   BlueLED_ON( Enable_SerialPrint_LED ) ;
+
+// }
+
+// /**
+//  * @brief LED - Turn on fonction
+//  *
+//  * @param Enable_SerialPrint_LED If true, serial printing is enabled, otherwise disabled.
+//  */
+// void BlueLED_ON( bool Enable_SerialPrint_LED ){
+ 
+//   digitalWrite(Blue_LED, LOW);
+
+//   if( Enable_SerialPrint_LED == true ){ Serial.println("LED: ON") ; }
+
+// }
+
+// /**
+//  * @brief LED - Turn off fonction
+//  *
+//  * @param Enable_SerialPrint_LED If true, serial printing is enabled, otherwise disabled.
+//  */
+// void BlueLED_OFF( bool Enable_SerialPrint_LED ){
+ 
+//   digitalWrite(Blue_LED, HIGH);
+
+//   if( Enable_SerialPrint_LED == true ){ Serial.println("LED: OFF") ; }
+
 // }
 
 
-/* >>> BLUE LED <<< */
+// /**
+//  * @brief STM32L0 - Configure pinMode and resolution for battery monitoring
+//  *
+//  * @param Enable_SerialPrint_Battery If true, serial printing is enabled, otherwise disabled.
+//  * 
+//  * @note analogReadResolution( 12 ) ;
+//  * 
+//  */
+// void Battery_Config( bool Enable_SerialPrint_Battery ){
 
-void BlueLED_Config( bool Enable_SerialPrint_LED ){
- 
-  pinMode(Blue_LED, OUTPUT);      
-  BlueLED_ON( Enable_SerialPrint_LED ) ;
+//   if( Enable_SerialPrint_Battery == true ){ Serial.println( "Battery: Battery_Config") ; }
 
-}
+//   pinMode(Battery_Pin_Monitor, OUTPUT) ;
+//   pinMode(Battery_Pin_ADC, INPUT)      ; // set up ADC battery voltage monitor pin
+//   analogReadResolution(12)             ; // use 12-bit ADC resolution
 
-void BlueLED_ON( bool Enable_SerialPrint_LED ){
- 
-  digitalWrite(Blue_LED, LOW);
+// }
 
-  if( Enable_SerialPrint_LED == true ){ Serial.println("LED: ON") ; }
+// /**
+//  * @brief STM32L0 - Read the tension of the battery
+//  *
+//  * @param Enable_SerialPrint_Battery If true, serial printing is enabled, otherwise disabled.
+//  * 
+//  * @return float BatteryTension
+//  * 
+//  */
+// float Battery_GetTension(bool Enable_SerialPrint_Battery){
 
-}
+//   if( Enable_SerialPrint_Battery == true ){ Serial.print( "Battery: Battery_GetTension") ; }
 
-void BlueLED_OFF( bool Enable_SerialPrint_LED ){
- 
-  digitalWrite(Blue_LED, HIGH);
+//   VDDA = STM32L0.getVDDA();
+//   BatteryTension = 1.27f * VDDA * ((float)analogRead(Battery_Pin_ADC)) / 4096.0f;
 
-  if( Enable_SerialPrint_LED == true ){ Serial.println("LED: OFF") ; }
+//   if( Enable_SerialPrint_Battery == true ){ Serial.print( " - ") ; Serial.print(BatteryTension, 2) ; Serial.println(" V") ; }
 
-}
+//   return BatteryTension ;
 
-
-/* >>> Battery <<< */
-
-void Battery_Config( bool Enable_SerialPrint_Battery ){
-
-  if( Enable_SerialPrint_Battery == true ){ Serial.println( "Battery: Battery_Config") ; }
-
-  pinMode(Battery_Pin_Monitor, OUTPUT) ;
-  pinMode(Battery_Pin_ADC, INPUT)      ; // set up ADC battery voltage monitor pin
-  analogReadResolution(12)             ; // use 12-bit ADC resolution
-
-}
-
-void Battery_GetTension(bool Enable_SerialPrint_Battery){
-
-  if( Enable_SerialPrint_Battery == true ){ Serial.print( "Battery: Battery_GetTension") ; }
-
-  VDDA = STM32L0.getVDDA();
-  BatteryLevel = 1.27f * VDDA * ((float)analogRead(Battery_Pin_ADC)) / 4096.0f;
-
-  if( Enable_SerialPrint_Battery == true ){ Serial.print( " - ") ; Serial.print(BatteryLevel, 2) ; Serial.println(" V") ; }
-
-}
+// }
 
 
 /* >>> RTC Alarm <<< */
@@ -469,7 +517,7 @@ void RTC_Alarm_Fct_Wakeup() {
 
   // Serial.println( (String)"RTC_Timer_count = " + RTC_Timer_count ) ;
 
-  if( STM32_Sleeping == true ){ STM32_WakeUp( Enable_SerialPrint_STM32 ) ; }
+  if( STM32_Sleeping == true ){ STM32_Sleeping = STM32L0.STM32_WakeUp( Enable_SerialPrint_STM32 ) ; }
 
   RTC_Alarm_Flag = true ; // Just set flag when interrupt received, don't try reading data in an interrupt handler
   
@@ -724,13 +772,13 @@ void LoRa_SendPayload( bool Enable_SerialPrint_LoRa ) {
     CayenneLPPayload.reset(); // Reset writing payload
 
     CayenneLPPayload.addTemperature( 1 , STM32_Temperature_float ) ;
-    CayenneLPPayload.addBatteryLevel( 2 , BatteryLevel ) ;
+    CayenneLPPayload.addBatteryLevel( 2 , BatteryTension ) ;
     #if( Use_Acc == true )
     CayenneLPPayload.addTemperature( 3 , LIS2DWS12_Temperature ) ; 
     CayenneLPPayload.addAccelerometer( 3 , Acc_X, Acc_Y, Acc_Z)          ; // add Accelerometer
     #endif
     #if( Use_GPS == true )
-    // float GPS_Latitude = 43.123456 ;
+    // float GPS_Latitude = 43.123456 ; 
     // float GPS_Longitude = 3.123456 ;
     CayenneLPPayload.addGPS( 4 , (float)GPS_Latitude , (float)GPS_Longitude ) ; 
     #endif
