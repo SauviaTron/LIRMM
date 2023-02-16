@@ -14,29 +14,28 @@
 #include "LIS2DW12.h"
 #include "I2CDev.h"
 
-  #define LIS2DW12_intPin1   A4    // interrupt1 pin definitions, wake-up from STANDBY pin
-  #define LIS2DW12_intPin2    3    // interrupt2 pin definitions, data ready or sleep interrupt
-  // Specify sensor parameters //
-  LPMODE   lpMode = LIS2DW12_LP_MODE_1;      // choices are low power modes 1, 2, 3, or 4
-  MODE     mode   = LIS2DW12_MODE_LOW_POWER; // choices are low power, high performance, and one shot modes
-  ODR      odr    = LIS2DW12_ODR_12_5_1_6HZ; //  1.6 Hz in lpMode, max is 200 Hz in LpMode
-  FS       fs     = LIS2DW12_FS_2G;          // choices are 2, 4, 8, or 16 g
-  BW_FILT  bw     = LIS2DW12_BW_FILT_ODR2;   // choices are ODR divided by 2, 4, 10, or 20
-  FIFOMODE fifoMode = BYPASS;                // capture 32 samples of data before wakeup event, about 2 secs at 25 Hz
-  bool lowNoise = false;                     // low noise or lowest power
-  float aRes = 0;         // Sensor data scale in mg/LSB
-  int16_t accelCount[3];  // Stores the 16-bit signed accelerometer sensor output
-  // int16_t LIS2DWS12_Temp_Raw;      // temperature raw count output
-  // float   LIS2DWS12_Temperature;    // Stores the real internal chip temperature in degrees Celsius
-  // float Acc_X, Acc_Y, Acc_Z;       // variables to hold latest sensor data values 
-  float offset[3];        // holds accel bias offsets
-  float stress[3];        // holds results of the self test
-  uint8_t status = 0, wakeSource = 0, FIFOstatus = 0, numFIFOSamples = 0;
-  // Logic flags to keep track of device states
-  volatile bool LIS2DW12_wake_flag = false;
-  volatile bool LIS2DW12_sleep_flag = false;
-  volatile bool InMotion = false;
-
+#define LIS2DW12_intPin1   A4    // interrupt1 pin definitions, wake-up from STANDBY pin
+#define LIS2DW12_intPin2    3    // interrupt2 pin definitions, data ready or sleep interrupt
+// Specify sensor parameters //
+LPMODE   lpMode = LIS2DW12_LP_MODE_1;      // choices are low power modes 1, 2, 3, or 4
+MODE     mode   = LIS2DW12_MODE_LOW_POWER; // choices are low power, high performance, and one shot modes
+ODR      odr    = LIS2DW12_ODR_12_5_1_6HZ; //  1.6 Hz in lpMode, max is 200 Hz in LpMode
+FS       fs     = LIS2DW12_FS_2G;          // choices are 2, 4, 8, or 16 g
+BW_FILT  bw     = LIS2DW12_BW_FILT_ODR2;   // choices are ODR divided by 2, 4, 10, or 20
+FIFOMODE fifoMode = BYPASS;                // capture 32 samples of data before wakeup event, about 2 secs at 25 Hz
+bool lowNoise = false;                     // low noise or lowest power
+float aRes = 0;         // Sensor data scale in mg/LSB
+int16_t accelCount[3];  // Stores the 16-bit signed accelerometer sensor output
+// int16_t LIS2DWS12_Temp_Raw;      // temperature raw count output
+// float   LIS2DWS12_Temperature;    // Stores the real internal chip temperature in degrees Celsius
+// float Acc_X, Acc_Y, Acc_Z;       // variables to hold latest sensor data values 
+float offset[3];        // holds accel bias offsets
+float stress[3];        // holds results of the self test
+uint8_t status = 0, wakeSource = 0, FIFOstatus = 0, numFIFOSamples = 0;
+// Logic flags to keep track of device states
+volatile bool LIS2DW12_wake_flag = false;
+volatile bool LIS2DW12_sleep_flag = false;
+volatile bool InMotion = false;
 
 LIS2DW12::LIS2DW12(I2Cdev* i2c_bus)
 {
