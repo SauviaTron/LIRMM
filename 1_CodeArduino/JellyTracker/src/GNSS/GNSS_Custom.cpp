@@ -29,6 +29,29 @@
 #include "GNSS_Custom.h"
 #include "wiring_private.h"
 
+// GNSSLocation myLocation;
+// GNSSSatellites mySatellites;
+// MAX M8Q GNSS configuration
+#define GNSS_en      5     // enable for GNSS 3.0 V LDO
+#define pps          4     // 1 Hz fix pulse
+#define GNSS_backup A0     // RTC backup for MAX M8Q
+
+uint16_t GPS_Hour = 1, GPS_Minute = 1, GPS_Second = 1, GPS_Year = 1, GPS_Month = 1, GPS_Day = 1;
+//uint8_t hours = 12, minutes = 0, seconds = 0, year = 1, month = 1, day = 1;
+volatile bool ppsFlag = false, firstSync = false, alarmFlag = true;
+uint16_t count = 0, fixType = 0, fixQuality;
+int32_t latOut, longOut;
+
+float Alt, EHPE;
+
+// double Lat, Long ;
+// unsigned int NbSatellites ;
+
+static const char *fixTypeString[] = { "NONE", "TIME", "2D", "3D" };
+static const char *fixQualityString[] = { "", "", "/DIFFERENTIAL", "/PRECISE", "/RTK_FIXED", "/RTK_FLOAT", "/ESTIMATED", "/MANUAL", "/SIMULATION" };
+
+unsigned long previousMillis = 0 ;
+
 GNSSLocation::GNSSLocation(const gnss_location_t *location)
 {
     _location = *location;
@@ -632,6 +655,123 @@ void GNSSClass::ppsCallback(class GNSSClass *self)
     if (self->_ppsCallback) {
         (*self->_ppsCallback)();
     }
+}
+
+void GNSSClass::GPS_Config( bool Enable_SerialPrint_GPS ){
+
+    pinMode(GNSS_backup, OUTPUT);
+    digitalWrite(GNSS_backup, HIGH);
+
+    /* Initialize and configure GNSS */
+    begin(Serial1, GNSS.MODE_UBLOX, GNSS.RATE_1HZ); // Start GNSS
+    while (busy()) { } // wait for begin to complete
+
+    setConstellation(GNSS.CONSTELLATION_GPS_AND_GLONASS); // choose satellites
+    while (busy()) { } // wait for set to complete
+
+    setAntenna(GNSS.ANTENNA_EXTERNAL);  
+    while (busy()) { } // wait for set to complete
+
+    enableWakeup();
+    while (busy()) { } // wait for set to complete
+
+}
+
+/**
+ * @brief GPS MAX M8Q - Turns on the module.
+ *
+ * @param Enable_SerialPrint_GPS If true, serial printing is enabled, otherwise disabled.
+ */
+void GNSSClass::GPS_ON( bool Enable_SerialPrint_GPS ){
+    resume();
+    while (busy()) { }                                     // Wait for set to complete
+    if( Enable_SerialPrint_GPS == true ){ Serial.println("GPS state: ON"); }
+}
+
+/**
+ * GPS MAX M8Q - Turns off the module.
+ *
+ * @param Enable_SerialPrint_GPS If true, serial printing is enabled, otherwise disabled.
+ */
+void GNSSClass::GPS_OFF( bool Enable_SerialPrint_GPS ){
+    suspend() ;
+    if( Enable_SerialPrint_GPS == true ){ Serial.println("GPS state: OFF"); }
+} 
+
+void GNSSClass::GPS_ReadUpdate( int GPS_TimeON, double *Lat, double *Long, unsigned int *NbSatellites, bool Enable_SerialPrint_GPS ){
+
+    GNSSLocation myLocation;
+    GNSSSatellites mySatellites;
+
+    int now = millis() ;
+    while( (millis()-now) <= GPS_TimeON * 1000 ){
+
+    if( GNSS.location(myLocation) ){
+
+        Serial.print( (String)"LOCATION: " + fixTypeString[myLocation.fixType()]) ;
+
+        if( GNSS.satellites(mySatellites) ){ Serial.print( (String)" - SATELLITES: " + mySatellites.count()) ; *NbSatellites = mySatellites.count() ;}
+
+        if( myLocation.fixType() == GNSSLocation::TYPE_NONE ){ Serial.println( " " ) ; }
+
+        if( myLocation.fixType() != GNSSLocation::TYPE_NONE ){
+
+        GPS_Hour   = myLocation.hours()   ;
+        GPS_Minute = myLocation.minutes() ;
+        GPS_Second = myLocation.seconds() ;
+        GPS_Year   = myLocation.year()    ;
+        GPS_Month  = myLocation.month()   ;
+        GPS_Day    = myLocation.day()     ;
+        
+        Serial.print(fixQualityString[myLocation.fixQuality()]) ; Serial.print(" - ") ;
+
+        Serial.print( GPS_Year + (String)"/" + GPS_Month + (String)"/" + GPS_Day + (String)" " ) ; 
+
+        if( GPS_Hour   <= 9){ Serial.print("0"); } Serial.print( GPS_Hour   + (String)":" ); 
+        if( GPS_Minute <= 9){ Serial.print("0"); } Serial.print( GPS_Minute + (String)":" ); 
+        if( GPS_Second <= 9){ Serial.print("0"); } Serial.print( GPS_Second + (String)" " ); 
+
+        // if( myLocation.leapSeconds() != GNSSLocation::LEAP_SECONDS_UNDEFINED) {
+        //   Serial.print(" ");
+        //   Serial.print(myLocation.leapSeconds());
+        //   if (!myLocation.fullyResolved()){ Serial.print("D") ; }
+        // }
+
+        if( myLocation.fixType() != GNSSLocation::TYPE_TIME ){
+
+            *Lat  = myLocation.latitude()  ; myLocation.latitude(latOut);
+            *Long = myLocation.longitude() ; myLocation.longitude(longOut);
+            Alt  = myLocation.altitude()  ;
+            EHPE = myLocation.ehpe()      ; // use this as accuracy figure of merit
+
+            Serial.print("- Coord: ");
+            Serial.print(*Lat, 7); Serial.print(","); Serial.print(*Long, 7); Serial.print(","); Serial.print(Alt, 3);
+            Serial.print(" - EHPE: "); Serial.print(EHPE, 3) ; 
+            Serial.print(" - SATELLITES fixed: "); Serial.println(myLocation.satellites());
+
+        } // if( myLocation.fixType() != GNSSLocation::TYPE_TIME )
+
+        } // if( myLocation.fixType() != GNSSLocation::TYPE_NONE )
+
+    } // if( GNSS.location(myLocation) )
+
+    } //while( (millis()-now) <= 60000 )
+
+}
+
+void GNSSClass::GPS_First_Fix( double *Lat, double *Long, unsigned int *NbSatellites, bool Enable_SerialPrint_GPS ){
+
+    EHPE = 999.99f;
+
+    while (EHPE >= 150.0){ // Waiting to have a "good" EHPE
+
+        EHPE = 999.99f;
+
+        GPS_ReadUpdate( 10 , Lat, Long, NbSatellites, Enable_SerialPrint_GPS );
+
+    } // while( EHPE >= 150.0 )
+
+    Serial.println("Fix GPS done.");
 }
 
 GNSSClass GNSS;

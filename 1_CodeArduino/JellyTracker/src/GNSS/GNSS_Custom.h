@@ -32,6 +32,8 @@
 #include "Arduino.h"
 #include "GNSS_Utility/gnss_api.h"
 
+
+
 class GNSSLocation {
 public:
     enum GNSSfixType {
@@ -187,6 +189,12 @@ public:
 
     void attachInterrupt(void(*callback)(void));
     void detachInterrupt();
+
+    void GPS_Config( bool Enable_SerialPrint_GPS );
+    void GPS_ON( bool Enable_SerialPrint_GPS );
+    void GPS_OFF( bool Enable_SerialPrint_GPS );
+    void GPS_ReadUpdate( int GPS_TimeON, double *Lat, double *Long, unsigned int *NbSatellites, bool Enable_SerialPrint_GPS );
+    void GPS_First_Fix( double *Lat, double *Long, unsigned int *NbSatellites, bool Enable_SerialPrint_GPS );
 
 private:
     Uart *_uart;

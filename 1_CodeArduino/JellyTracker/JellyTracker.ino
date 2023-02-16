@@ -16,7 +16,7 @@
 
 #include "src/STM32L0_Custom.h"     // Management of the STM32L082CZ
 #include "src/RTC_Custom.h"         // Use Real Time Clock features
-#include "src/GNSS_Custom.h"        // Use GPS - MAX M8Q
+#include "src/GNSS/GNSS_Custom.h"        // Use GPS - MAX M8Q
 #include "src/Flash_ReadWrite.h"    // Use 196kB Flash Memory of the STM32L082CZ 
 #include "src/LoRaWAN/LoRaWAN.h"            // Use LoRaWAN
 #include "src/CayenneLPP/CayenneLPP.h"  // Use Cayenne Low Power Payload
@@ -25,7 +25,7 @@
 /* >>> What to use ? <<< */
 #define GNAT_L082CZ_  0
 #define Use_Acc       false 
-#define Use_GPS       false
+#define Use_GPS       true
 #define Use_LoRa      true
 
 
@@ -102,25 +102,27 @@ LIS2DW12 LIS2DW12(&I2C); // instantiate LIS2DW12 class
 
 /* >>> MAX M8Q - GPS <<< */
 #if( Use_GPS == true )
-GNSSLocation myLocation;
-GNSSSatellites mySatellites;
+// GNSSLocation myLocation;
+// GNSSSatellites mySatellites;
 // MAX M8Q GNSS configuration
-#define GNSS_en      5     // enable for GNSS 3.0 V LDO
-#define pps          4     // 1 Hz fix pulse
-#define GNSS_backup A0     // RTC backup for MAX M8Q
+// #define GNSS_en      5     // enable for GNSS 3.0 V LDO
+// #define pps          4     // 1 Hz fix pulse
+// #define GNSS_backup A0     // RTC backup for MAX M8Q
 
-uint16_t GPS_Hour = 1, GPS_Minute = 1, GPS_Second = 1, GPS_Year = 1, GPS_Month = 1, GPS_Day = 1;
-//uint8_t hours = 12, minutes = 0, seconds = 0, year = 1, month = 1, day = 1;
-volatile bool ppsFlag = false, firstSync = false, alarmFlag = true;
-uint16_t count = 0, fixType = 0, fixQuality;
-int32_t latOut, longOut;
+// uint16_t GPS_Hour = 1, GPS_Minute = 1, GPS_Second = 1, GPS_Year = 1, GPS_Month = 1, GPS_Day = 1;
+// //uint8_t hours = 12, minutes = 0, seconds = 0, year = 1, month = 1, day = 1;
+// volatile bool ppsFlag = false, firstSync = false, alarmFlag = true;
+// uint16_t count = 0, fixType = 0, fixQuality;
+// int32_t latOut, longOut;
 
-float Long, Lat, Alt, EHPE;
+int GPS_TimerON = 45 ;
+double GPS_Longitude, GPS_Latitude ;
+unsigned int GPS_NbSatellites ;
 
-static const char *fixTypeString[] = { "NONE", "TIME", "2D", "3D" };
-static const char *fixQualityString[] = { "", "", "/DIFFERENTIAL", "/PRECISE", "/RTK_FIXED", "/RTK_FLOAT", "/ESTIMATED", "/MANUAL", "/SIMULATION" };
+// static const char *fixTypeString[] = { "NONE", "TIME", "2D", "3D" };
+// static const char *fixQualityString[] = { "", "", "/DIFFERENTIAL", "/PRECISE", "/RTK_FIXED", "/RTK_FLOAT", "/ESTIMATED", "/MANUAL", "/SIMULATION" };
 
-unsigned long previousMillis = 0 ;
+// unsigned long previousMillis = 0 ;
 #endif
 
 
@@ -165,14 +167,13 @@ void RTC_Alarm_Fct_Wakeup() ;
 //   void Acc_Get_Temperature( bool Enable_SerialPrint_Acc ) ;
 // #endif
 
-#if( Use_GPS == true )
-  void GPS_Config( bool Enable_SerialPrint_GPS );
-  void GPS_ON( bool Enable_SerialPrint_GPS );
-  void GPS_OFF( bool Enable_SerialPrint_GPS );
-  void GPS_ReadUpdate( bool Enable_SerialPrint_GPS );
-  void GPS_First_Fix( bool Enable_SerialPrint_GPS );
-
-#endif
+// #if( Use_GPS == true )
+//   void GPS_Config( bool Enable_SerialPrint_GPS );
+//   void GPS_ON( bool Enable_SerialPrint_GPS );
+//   void GPS_OFF( bool Enable_SerialPrint_GPS );
+//   void GPS_ReadUpdate( bool Enable_SerialPrint_GPS );
+//   void GPS_First_Fix( bool Enable_SerialPrint_GPS );
+// #endif
 
 #if( Use_LoRa == true )
 // void LoRa_Config( bool Enable_SerialPrint_LoRa );
@@ -212,8 +213,8 @@ void setup(){
 
   /* >>> MAX M8Q - GPS <<< */
   #if (Use_GPS == true)
-  GPS_Config(Enable_SerialPrint_GPS);
-  GPS_First_Fix(Enable_SerialPrint_GPS);
+  GNSS.GPS_Config(Enable_SerialPrint_GPS);
+  GNSS.GPS_First_Fix( &GPS_Latitude, &GPS_Longitude, &GPS_NbSatellites, Enable_SerialPrint_GPS );
   #endif
 
   /* >>> RTC <<< */
@@ -258,15 +259,17 @@ void loop() {
 
     #if (Use_GPS == true)
     RTC_Disable(Enable_SerialPrint_RTC); delay(100);
-    GPS_ON(Enable_SerialPrint_GPS); delay(100);
-    GPS_ReadUpdate(Enable_SerialPrint_GPS); delay(100);
-    GPS_OFF(Enable_SerialPrint_GPS); delay(100);
+    GNSS.GPS_ON(Enable_SerialPrint_GPS); delay(100);
+    GNSS.GPS_ReadUpdate( GPS_TimerON, &GPS_Latitude, &GPS_Longitude, &GPS_NbSatellites, Enable_SerialPrint_GPS); delay(100);
+    GNSS.GPS_OFF(Enable_SerialPrint_GPS); delay(100);
     RTC_Enable(Enable_SerialPrint_RTC);
     #endif
 
     #if( Use_LoRa == true )
     LoRa_SendPayload( Enable_SerialPrint_LoRa ) ;
     #endif
+
+//STM32_StopMode(Enable_SerialPrint_STM32);
 
   } // if( RTC_Alarm_Flag == true )
 
@@ -571,114 +574,115 @@ void RTC_Alarm_Fct_Wakeup() {
 
 
 /* >>> MAX M9Q - GPS <<< */
-#if( Use_GPS == true )
 
-  void GPS_Config( bool Enable_SerialPrint_GPS ){
-
-    pinMode(GNSS_backup, OUTPUT);
-    digitalWrite(GNSS_backup, HIGH);
-
-    /* Initialize and configure GNSS */
-    GNSS.begin(Serial1, GNSS.MODE_UBLOX, GNSS.RATE_1HZ); // Start GNSS
-    while (GNSS.busy()) { } // wait for begin to complete
-
-    GNSS.setConstellation(GNSS.CONSTELLATION_GPS_AND_GLONASS); // choose satellites
-    while (GNSS.busy()) { } // wait for set to complete
-
-    GNSS.setAntenna(GNSS.ANTENNA_EXTERNAL);  
-    while (GNSS.busy()) { } // wait for set to complete
-
-    GNSS.enableWakeup();
-    while (GNSS.busy()) { } // wait for set to complete
-
-  }
-
-  void GPS_ON( bool Enable_SerialPrint_GPS ){
-    GNSS.resume();
-    while (GNSS.busy()) { }                                     // Wait for set to complete
-    if( Enable_SerialPrint_GPS == true ){ Serial.println("GPS state: ON"); }
-  }
-
-  void GPS_OFF( bool Enable_SerialPrint_GPS ){
-    GNSS.suspend() ;
-    if( Enable_SerialPrint_GPS == true ){ Serial.println("GPS state: OFF"); }
-  } 
-
-  void GPS_ReadUpdate( bool Enable_SerialPrint_GPS ){
-
-    int now = millis() ;
-    while( (millis()-now) <= 10000 ){
-
-    if( GNSS.location(myLocation) ){
-
-      Serial.print( (String)"LOCATION: " + fixTypeString[myLocation.fixType()]) ;
-
-      if( GNSS.satellites(mySatellites) ){ Serial.print( (String)" - SATELLITES: " + mySatellites.count()) ; }
-
-      if( myLocation.fixType() == GNSSLocation::TYPE_NONE ){ Serial.println( " " ) ; }
-
-      if( myLocation.fixType() != GNSSLocation::TYPE_NONE ){
-
-        GPS_Hour   = myLocation.hours()   ;
-        GPS_Minute = myLocation.minutes() ;
-        GPS_Second = myLocation.seconds() ;
-        GPS_Year   = myLocation.year()    ;
-        GPS_Month  = myLocation.month()   ;
-        GPS_Day    = myLocation.day()     ;
-        
-        Serial.print(fixQualityString[myLocation.fixQuality()]) ; Serial.print(" - ") ;
-
-        Serial.print( GPS_Year + (String)"/" + GPS_Month + (String)"/" + GPS_Day + (String)" " ) ; 
-
-        if( GPS_Hour   <= 9){ Serial.print("0"); } Serial.print( GPS_Hour   + (String)":" ); 
-        if( GPS_Minute <= 9){ Serial.print("0"); } Serial.print( GPS_Minute + (String)":" ); 
-        if( GPS_Second <= 9){ Serial.print("0"); } Serial.print( GPS_Second + (String)" " ); 
-
-        // if( myLocation.leapSeconds() != GNSSLocation::LEAP_SECONDS_UNDEFINED) {
-        //   Serial.print(" ");
-        //   Serial.print(myLocation.leapSeconds());
-        //   if (!myLocation.fullyResolved()){ Serial.print("D") ; }
-        // }
-
-        if( myLocation.fixType() != GNSSLocation::TYPE_TIME ){
-
-          Lat  = myLocation.latitude()  ; myLocation.latitude(latOut);
-          Long = myLocation.longitude() ; myLocation.longitude(longOut);
-          Alt  = myLocation.altitude()  ;
-          EHPE = myLocation.ehpe()      ; // use this as accuracy figure of merit
-
-          Serial.print("- Coord: ");
-          Serial.print(Lat, 7); Serial.print(","); Serial.print(Long, 7); Serial.print(","); Serial.print(Alt, 3);
-          Serial.print(" - EHPE: "); Serial.print(EHPE, 3) ; 
-          Serial.print(" - SATELLITES fixed: "); Serial.println(myLocation.satellites());
-
-        } // if( myLocation.fixType() != GNSSLocation::TYPE_TIME )
-
-      } // if( myLocation.fixType() != GNSSLocation::TYPE_NONE )
-
-    } // if( GNSS.location(myLocation) )
-
-    } //while( (millis()-now) <= 60000 )
-
-  }
-  
-  void GPS_First_Fix( bool Enable_SerialPrint_GPS ){
-    
-    EHPE = 999.99f ;
-
-    while( EHPE >= 150.0 ){ // Waiting to have a "good" EHPE 
-
-      EHPE = 999.99f ;
-
-      GPS_ReadUpdate( Enable_SerialPrint_GPS ) ;
-
-    } // while( EHPE >= 150.0 )
-    
-    Serial.println("Fix GPS done.") ;
-
-  } 
-
-#endif
+// #if( Use_GPS == true )
+//
+//   void GPS_Config( bool Enable_SerialPrint_GPS ){
+//
+//     pinMode(GNSS_backup, OUTPUT);
+//     digitalWrite(GNSS_backup, HIGH);
+//
+//     /* Initialize and configure GNSS */
+//     GNSS.begin(Serial1, GNSS.MODE_UBLOX, GNSS.RATE_1HZ); // Start GNSS
+//     while (GNSS.busy()) { } // wait for begin to complete
+//
+//     GNSS.setConstellation(GNSS.CONSTELLATION_GPS_AND_GLONASS); // choose satellites
+//     while (GNSS.busy()) { } // wait for set to complete
+//
+//     GNSS.setAntenna(GNSS.ANTENNA_EXTERNAL);  
+//     while (GNSS.busy()) { } // wait for set to complete
+//
+//     GNSS.enableWakeup();
+//     while (GNSS.busy()) { } // wait for set to complete
+//
+//   }
+//
+//   void GPS_ON( bool Enable_SerialPrint_GPS ){
+//     GNSS.resume();
+//     while (GNSS.busy()) { }                                     // Wait for set to complete
+//     if( Enable_SerialPrint_GPS == true ){ Serial.println("GPS state: ON"); }
+//   }
+//
+//   void GPS_OFF( bool Enable_SerialPrint_GPS ){
+//     GNSS.suspend() ;
+//     if( Enable_SerialPrint_GPS == true ){ Serial.println("GPS state: OFF"); }
+//   } 
+//
+//   void GPS_ReadUpdate( bool Enable_SerialPrint_GPS ){
+//
+//     int now = millis() ;
+//     while( (millis()-now) <= 10000 ){
+//
+//     if( GNSS.location(myLocation) ){
+//
+//       Serial.print( (String)"LOCATION: " + fixTypeString[myLocation.fixType()]) ;
+//
+//       if( GNSS.satellites(mySatellites) ){ Serial.print( (String)" - SATELLITES: " + mySatellites.count()) ; }
+//
+//       if( myLocation.fixType() == GNSSLocation::TYPE_NONE ){ Serial.println( " " ) ; }
+//
+//       if( myLocation.fixType() != GNSSLocation::TYPE_NONE ){
+//
+//         GPS_Hour   = myLocation.hours()   ;
+//         GPS_Minute = myLocation.minutes() ;
+//         GPS_Second = myLocation.seconds() ;
+//         GPS_Year   = myLocation.year()    ;
+//         GPS_Month  = myLocation.month()   ;
+//         GPS_Day    = myLocation.day()     ;
+//
+//         Serial.print(fixQualityString[myLocation.fixQuality()]) ; Serial.print(" - ") ;
+//
+//         Serial.print( GPS_Year + (String)"/" + GPS_Month + (String)"/" + GPS_Day + (String)" " ) ; 
+//
+//         if( GPS_Hour   <= 9){ Serial.print("0"); } Serial.print( GPS_Hour   + (String)":" ); 
+//         if( GPS_Minute <= 9){ Serial.print("0"); } Serial.print( GPS_Minute + (String)":" ); 
+//         if( GPS_Second <= 9){ Serial.print("0"); } Serial.print( GPS_Second + (String)" " ); 
+//
+//         // if( myLocation.leapSeconds() != GNSSLocation::LEAP_SECONDS_UNDEFINED) {
+//         //   Serial.print(" ");
+//         //   Serial.print(myLocation.leapSeconds());
+//         //   if (!myLocation.fullyResolved()){ Serial.print("D") ; }
+//         // }
+//
+//         if( myLocation.fixType() != GNSSLocation::TYPE_TIME ){
+//
+//           Lat  = myLocation.latitude()  ; myLocation.latitude(latOut);
+//           Long = myLocation.longitude() ; myLocation.longitude(longOut);
+//           Alt  = myLocation.altitude()  ;
+//           EHPE = myLocation.ehpe()      ; // use this as accuracy figure of merit
+//
+//           Serial.print("- Coord: ");
+//           Serial.print(Lat, 7); Serial.print(","); Serial.print(Long, 7); Serial.print(","); Serial.print(Alt, 3);
+//           Serial.print(" - EHPE: "); Serial.print(EHPE, 3) ; 
+//           Serial.print(" - SATELLITES fixed: "); Serial.println(myLocation.satellites());
+//
+//         } // if( myLocation.fixType() != GNSSLocation::TYPE_TIME )
+//
+//       } // if( myLocation.fixType() != GNSSLocation::TYPE_NONE )
+//
+//     } // if( GNSS.location(myLocation) )
+//
+//     } //while( (millis()-now) <= 60000 )
+//
+//   }
+//
+//   void GPS_First_Fix( bool Enable_SerialPrint_GPS ){
+//
+//     EHPE = 999.99f ;
+//
+//     while( EHPE >= 150.0 ){ // Waiting to have a "good" EHPE 
+//
+//       EHPE = 999.99f ;
+//
+//       GPS_ReadUpdate( Enable_SerialPrint_GPS ) ;
+//
+//     } // while( EHPE >= 150.0 )
+//
+//     Serial.println("Fix GPS done.") ;
+//
+//   } 
+//
+// #endif
 
 
 /* >>> LoRa <<< */
@@ -726,9 +730,9 @@ void LoRa_SendPayload( bool Enable_SerialPrint_LoRa ) {
     CayenneLPPayload.addAccelerometer( 3 , Acc_X, Acc_Y, Acc_Z)          ; // add Accelerometer
     #endif
     #if( Use_GPS == true )
-    float GPS_Latitude = 43.123456 ;
-    float GPS_Longitude = 3.123456 ;
-    CayenneLPPayload.addGPS( 4 , GPS_Latitude , GPS_Longitude ) ; 
+    // float GPS_Latitude = 43.123456 ;
+    // float GPS_Longitude = 3.123456 ;
+    CayenneLPPayload.addGPS( 4 , (float)GPS_Latitude , (float)GPS_Longitude ) ; 
     #endif
   
     LoRaWAN.sendPacket(CayenneLPPayload.getBuffer(), CayenneLPPayload.getSize());
