@@ -28,9 +28,6 @@
 #define Use_GPS       false
 #define Use_LoRa      false
 
-#if( Use_Acc == true )
-
-#endif
 
 
 /* >>> LoRa codes <<< */
@@ -75,7 +72,8 @@ int  RTC_Timer_Rescue = 100  ;
 #if( Use_Acc == true )
 #include "src/LIS2DW12/LIS2DW12.h"               // Use Accelerometer - LIS2DW12
 #define I2C_BUS    Wire               // Define the I2C bus (Wire instance) you wish to use
-I2Cdev             i2c_0(&I2C_BUS);   // Instantiate the I2Cdev object and point to the desired I2C bus
+I2Cdev             I2C(&I2C_BUS);   // Instantiate the I2Cdev object and point to the desired I2C bus
+int I2C_Frequency = 400000 ;
 //   #define LIS2DW12_intPin1   A4    // interrupt1 pin definitions, wake-up from STANDBY pin
 //   #define LIS2DW12_intPin2    3    // interrupt2 pin definitions, data ready or sleep interrupt
 //   // Specify sensor parameters //
@@ -98,7 +96,7 @@ I2Cdev             i2c_0(&I2C_BUS);   // Instantiate the I2Cdev object and point
 //   volatile bool LIS2DW12_wake_flag = false;
 //   volatile bool LIS2DW12_sleep_flag = false;
 //   volatile bool InMotion = false;
-LIS2DW12 LIS2DW12(&i2c_0); // instantiate LIS2DW12 class
+LIS2DW12 LIS2DW12(&I2C); // instantiate LIS2DW12 class
 #endif
 
 
@@ -159,13 +157,13 @@ void RTC_Enable( bool Enable_SerialPrint_RTC );
 void RTC_Disable( bool Enable_SerialPrint_RTC );
 void RTC_Alarm_Fct_Wakeup() ;
 
-void I2C_Config( ) ;
+// void I2C_Config( ) ;
 
-#if( Use_Acc == true )
-  void Acc_Config( bool Enable_SerialPrint_Acc ) ;
-  void Acc_Get_XYZ_Data( bool Enable_SerialPrint_Acc ) ;
-  void Acc_Get_Temperature( bool Enable_SerialPrint_Acc ) ;
-#endif
+// #if( Use_Acc == true )
+//   void Acc_Config( bool Enable_SerialPrint_Acc ) ;
+//   void Acc_Get_XYZ_Data( bool Enable_SerialPrint_Acc ) ;
+//   void Acc_Get_Temperature( bool Enable_SerialPrint_Acc ) ;
+// #endif
 
 #if( Use_GPS == true )
   void GPS_Config( bool Enable_SerialPrint_GPS );
@@ -198,8 +196,6 @@ void setup(){
   /* >>> Battery <<< */
   Battery_Config(Enable_SerialPrint_Battery);
 
-  /* >>> Sensors connection <<<*/
-  I2C_Config();
 
   // Info about LoRa
 
@@ -209,6 +205,7 @@ void setup(){
 
   /* >>> LIS2DW12 - Acc <<< */
   #if (Use_Acc == true)
+  I2C.Config_And_Scan( I2C_Frequency ) ;
   LIS2DW12.Acc_Config( Enable_SerialPrint_Acc ) ;
   #endif
 
@@ -478,21 +475,21 @@ void RTC_Alarm_Fct_Wakeup() {
 
 /* >>> Sensor connection <<< */
 
-void I2C_Config( ){
+// void I2C_Config( int I2C_Frequency ){
 
-    /* initialize two wire bus */
-  I2C_BUS.begin();                // Set master mode, default on SDA/SCL for STM32L0
-  I2C_BUS.setClock(400000);       // I2C frequency at 400 kHz
-  delay(1000);
+//     /* initialize two wire bus */
+//   I2C_BUS.begin();                // Set master mode, default on SDA/SCL for STM32L0
+//   I2C_BUS.setClock(400000);       // I2C frequency at 400 kHz
+//   delay(1000);
 
-  Serial.println("Scan for I2C devices:");
-  i2c_0.I2Cscan();                // should detect LIS2DW12 at 0x19
-  delay(1000);
-}
+//   Serial.println("Scan for I2C devices:");
+//   i2c_0.I2Cscan();                // should detect LIS2DW12 at 0x19
+//   delay(1000);
+// }
 
 
 /* >>> LIS2DW12 - Acc <<< */
-#if( Use_Acc == true )
+// #if( Use_Acc == true )
 
 //   void Acc_Config( bool Enable_SerialPrint_Acc ){
 
@@ -569,7 +566,7 @@ void I2C_Config( ){
 
   // }
 
-#endif
+// #endif
 
 
 /* >>> MAX M9Q - GPS <<< */

@@ -40,6 +40,7 @@ class I2Cdev {
          void                           writeByte(uint8_t devAddr, uint8_t regAddr, uint8_t data);
          void                           writeBytes(uint8_t devAddr, uint8_t regAddr, uint8_t count, uint8_t *dest);
          void                           I2Cscan();
+         void                           Config_And_Scan( int I2C_Frequency );
     private:
          TwoWire*                       _i2c_bus;                                                                                                                      // Class constructor argument
 };

@@ -170,3 +170,17 @@ void I2Cdev::I2Cscan()
   else
     Serial.println("I2C scan complete\n");
 }
+
+
+void I2Cdev::Config_And_Scan( int I2C_Frequency ){
+
+    /* initialize two wire bus */
+  _i2c_bus->begin();                // Set master mode, default on SDA/SCL for STM32L0
+  _i2c_bus->setClock( I2C_Frequency );       // I2C frequency at 400 kHz
+  delay(1000);
+
+  Serial.println("Scan for I2C devices:");
+  I2Cscan();                // should detect LIS2DW12 at 0x19
+  delay(1000);
+
+}
