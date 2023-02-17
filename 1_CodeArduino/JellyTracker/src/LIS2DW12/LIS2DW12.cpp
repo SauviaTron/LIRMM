@@ -280,6 +280,8 @@ void LIS2DW12::Acc_Config( bool Enable_SerialPrint_Acc ){
 
    aRes = 0.000244f * (1 << fs);                                    // scale resolutions per LSB for the sensor at 14-bit data 
 
+   // Serial.println( (String)">>> aRes : " + aRes ) ; 
+
    Serial.println("hold flat and motionless for bias calibration") ;
    delay(5000);
    Compensation(fs, odr, mode, lpMode, bw, lowNoise, offset); // quickly estimate offset bias in normal mode
@@ -327,10 +329,9 @@ void LIS2DW12::Acc_Get_Temperature( int16_t *LIS2DWS12_Temp_Raw, float *LIS2DWS1
   *LIS2DWS12_Temperature =  ((float) readTempData() ) + 25.0f; // 8-bit accel chip temperature in degrees Centigrade
   
   if( Enable_SerialPrint_Acc == true ){   
-  Serial.print("Accel: Raw Temperature ");  Serial.print(*LIS2DWS12_Temp_Raw, BIN);  Serial.println("°C"); // Print T values to tenths of s degree C  
-  Serial.print("Accel: Temperature ");  Serial.print(*LIS2DWS12_Temperature, 1);  Serial.println("°C"); // Print T values to tenths of s degree C  
+  Serial.print("Accelerometer - Raw 0b");  Serial.println(*LIS2DWS12_Temp_Raw, BIN); // Print T values to tenths of s degree C  
+  Serial.print(".             - Temp. ");  Serial.print(*LIS2DWS12_Temperature, 1);  Serial.println("°C"); // Print T values to tenths of s degree C  
   }
-
 
 }
 
@@ -344,11 +345,9 @@ void LIS2DW12::Acc_Get_XYZ_Data( float *Acc_X , float *Acc_Y, float *Acc_Z, bool
   *Acc_Z = (float)accelCount[2]*aRes - offset[2]; 
     
   if( Enable_SerialPrint_Acc == true ){
-    Serial.print( "Accelerometer : " ) ;
-    Serial.print( "Acc_X = "  ) ; Serial.print((int)1000* (*Acc_X) );  
-    Serial.print( " Acc_Y = " ) ; Serial.print((int)1000* (*Acc_Y) ); 
-    Serial.print( " Acc_Z = " ) ; Serial.print((int)1000* (*Acc_Z) ); 
-    Serial.println(" mg");
+    Serial.println( (String)".             - Acc_X = " + (int)1000* (*Acc_X) + (String)"mg - Offset : " + offset[0] + (String)"mg") ; 
+    Serial.println( (String)".             - Acc_Y = " + (int)1000* (*Acc_Y) + (String)"mg - Offset : " + offset[1] + (String)"mg") ;
+    Serial.println( (String)".             - Acc_Z = " + (int)1000* (*Acc_Z) + (String)"mg - Offset : " + offset[2] + (String)"mg") ;
   }
   
 }

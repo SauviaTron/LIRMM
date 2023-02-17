@@ -15,7 +15,7 @@
  */
 
 #include "src/STM32L0/STM32L0_Custom.h"     // Management of the STM32L082CZ
-#include "src/RTC_Custom.h"         // Use Real Time Clock features
+#include "src/RTC/RTC_Custom.h"         // Use Real Time Clock features
 #include "src/GNSS/GNSS_Custom.h"        // Use GPS - MAX M8Q
 #include "src/STM32L0/Flash_ReadWrite.h"    // Use 196kB Flash Memory of the STM32L082CZ 
 #include "src/LoRaWAN/LoRaWAN.h"            // Use LoRaWAN
@@ -23,8 +23,9 @@
 
 
 /* >>> What to use ? <<< */
+#define Debug_Mode    true
 #define GNAT_L082CZ_  0
-#define Use_Acc       false 
+#define Use_Acc       true 
 #define Use_GPS       true
 #define Use_LoRa      true
 
@@ -176,7 +177,7 @@ void RTC_Alarm_Fct_Wakeup() ;
 // #endif
 
 #if( Use_LoRa == true )
-// void LoRa_Config( bool Enable_SerialPrint_LoRa );
+void LoRa_Config( bool Enable_SerialPrint_LoRa );
 void LoRa_SendPayload( bool Enable_SerialPrint_LoRa ) ;
 #endif
 
@@ -190,6 +191,9 @@ void setup(){
 
   // put your setup code here, to run once:
   Serial.begin(115200);
+  if( Debug_Mode == true ){ while( !Serial ){} }
+
+  Serial.println("void setup()");
 
   /* >>> BLUE LED <<< */
   STM32L0.BlueLED_Config(Enable_SerialPrint_LED);
@@ -202,7 +206,7 @@ void setup(){
 
   #if (Use_LoRa == true)
   LoRaWAN.Config_And_JoinOTAA( devEui, appEui, appKey,  Enable_SerialPrint_LoRa );
-  // LoRa_Config(Enable_SerialPrint_LoRa);
+  // LoRa_Config( Enable_SerialPrint_LoRa ) ;
   #endif
 
   /* >>> LIS2DW12 - Acc <<< */
@@ -259,8 +263,6 @@ void loop() {
     #if( Use_LoRa == true )
     LoRa_SendPayload( Enable_SerialPrint_LoRa ) ;
     #endif
-
-//STM32_StopMode(Enable_SerialPrint_STM32);
 
   } // if( RTC_Alarm_Flag == true )
 
@@ -736,28 +738,28 @@ void RTC_Alarm_Fct_Wakeup() {
 /* >>> LoRa <<< */
 #if( Use_LoRa == true )
 
-// void LoRa_Config(bool Enable_SerialPrint_LoRa){
-//
-//     LoRaWAN.getDevEui(buffer, 18); // Get DevEUI
-//
-//     // --- Configuration LoRaWAN --- //
-//     // Asia AS923 | Australia  AU915 | Europe EU868 | India IN865 | Korea KR920 | US US915 (64 + 8 channels)
-//
-//     LoRaWAN.begin(EU868);
-//     LoRaWAN.setADR(false);
-//     LoRaWAN.setDataRate(0); // 0 => SF = 12 | 1 => SF = 11 | 2 => SF 10 ... Careful with the size of the payload
-//     LoRaWAN.setTxPower(0);
-//     LoRaWAN.setSubBand(1); // 1 for MTCAP, 2 for TT gateways
-//
-//     LoRaWAN.joinOTAA(appEui, appKey, devEui);
-//
-//     if (Enable_SerialPrint_LoRa == true){
-//       Serial.println((String) "DevEUI: " + devEui);
-//       Serial.println((String) "AppEUI: " + appEui);
-//       Serial.println((String) "AppKey: " + appKey);
-//     }
-//
-// }
+void LoRa_Config(bool Enable_SerialPrint_LoRa){
+
+    LoRaWAN.getDevEui(buffer, 18); // Get DevEUI
+
+    // --- Configuration LoRaWAN --- //
+    // Asia AS923 | Australia  AU915 | Europe EU868 | India IN865 | Korea KR920 | US US915 (64 + 8 channels)
+
+    LoRaWAN.begin(EU868);
+    LoRaWAN.setADR(false);
+    LoRaWAN.setDataRate(0); // 0 => SF = 12 | 1 => SF = 11 | 2 => SF 10 ... Careful with the size of the payload
+    LoRaWAN.setTxPower(0);
+    LoRaWAN.setSubBand(1); // 1 for MTCAP, 2 for TT gateways
+
+    LoRaWAN.joinOTAA(appEui, appKey, devEui);
+
+    if (Enable_SerialPrint_LoRa == true){
+      Serial.println((String) "DevEUI: " + devEui);
+      Serial.println((String) "AppEUI: " + appEui);
+      Serial.println((String) "AppKey: " + appKey);
+    }
+
+}
 
 void LoRa_SendPayload( bool Enable_SerialPrint_LoRa ) {
 
@@ -778,8 +780,8 @@ void LoRa_SendPayload( bool Enable_SerialPrint_LoRa ) {
     CayenneLPPayload.addAccelerometer( 3 , Acc_X, Acc_Y, Acc_Z)          ; // add Accelerometer
     #endif
     #if( Use_GPS == true )
-    // float GPS_Latitude = 43.123456 ; 
-    // float GPS_Longitude = 3.123456 ;
+    // double GPS_Latitude = 43.123456 ; 
+    // double GPS_Longitude = 3.123456 ;
     CayenneLPPayload.addGPS( 4 , (float)GPS_Latitude , (float)GPS_Longitude ) ; 
     #endif
   
