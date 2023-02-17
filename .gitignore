@@ -1,8 +1,8 @@
 # Visual Studio Code files
-.vscode
+*.vscode
 
 # OSX
-.DS_Store
+*.DS_Store
 
 # Folders
 2_NodeRED/
