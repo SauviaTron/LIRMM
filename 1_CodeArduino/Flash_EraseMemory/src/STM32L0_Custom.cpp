@@ -216,7 +216,6 @@ bool STM32L0Class::flashErase(uint32_t address, uint32_t count)
     count = (count + 127) & ~127;
 
     if ((address < FLASHSTART) || ((address + count) > FLASHEND)) {
-    Serial.println( "Flash    Fail to erase" ) ;
 	return false;
     }
 
@@ -224,7 +223,6 @@ bool STM32L0Class::flashErase(uint32_t address, uint32_t count)
     stm32l0_flash_erase(address, count);
     stm32l0_flash_lock();
     
-    Serial.println( "Flash    Erase succeded" ) ;
     return true;
 }
 

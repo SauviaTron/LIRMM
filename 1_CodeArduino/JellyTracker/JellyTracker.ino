@@ -28,6 +28,7 @@
 #define Use_Acc       false 
 #define Use_GPS       false
 #define Use_LoRa      true
+#define Use_Flash     true
 
 
 /* >>> LoRa codes <<< */
@@ -71,6 +72,13 @@ double GPS_Longitude, GPS_Latitude ;
 unsigned int GPS_NbSatellites ;
 #endif
 
+#if( Use_Flash == true )
+uint8_t data[128]; // tableau pour stocker les données lues
+uint32_t Flash_count = 128; // nombre de données à lir
+uint32_t flashAddress = 0x08021980 ;
+uint32_t flashAddress_Updated ;
+#endif
+
 
 /* >>> LoRa <<< */
 CayenneLPP CayenneLPPayload(64) ;
@@ -86,6 +94,7 @@ bool Enable_SerialPrint_RTC     = true    ;
 bool Enable_SerialPrint_Acc     = true    ;
 bool Enable_SerialPrint_GPS     = true    ;
 bool Enable_SerialPrint_LoRa    = true    ;
+bool Enable_SerialPrint_Flash   = true    ;
 
 
 /* >>> Functions <<< */
@@ -143,6 +152,11 @@ void setup(){
   //GNSS.GPS_First_Fix( &GPS_Latitude, &GPS_Longitude, &GPS_NbSatellites, Enable_SerialPrint_GPS );
   #endif
 
+  /* >>> Flash - 196kB <<< */
+  #if ( Use_Flash == true )
+  //STM32L0.flashErase( flashAddress , 2 ) ;
+  #endif
+
   /* >>> RTC <<< */
   RTC_Config(Enable_SerialPrint_RTC);
   RTC_Enable(Enable_SerialPrint_RTC);
@@ -164,7 +178,7 @@ void loop() {
   if (RTC_Alarm_Flag == true){
     RTC_Alarm_Flag = false;
 
-    Serial.println(">>> Your program <<<");
+    // Serial.println(">>> Your program <<<");
 
     STM32_Temperature_float = STM32L0.STM32_Temperature( Enable_SerialPrint_STM32 ) ;
     BatteryTension = STM32L0.Battery_GetTension( Enable_SerialPrint_Battery ) ;
@@ -186,6 +200,18 @@ void loop() {
 
     #if( Use_LoRa == true )
     LoRa_SendPayload( Enable_SerialPrint_LoRa ) ;
+    #endif
+
+    #if( Use_Flash == true )
+    String Year_String  = String( 23 )  ;
+    String Month_String = String( 2 )   ; if( Month_String.length() < 2 ){ Month_String = "0" + Month_String ; } 
+    String Day_String   = String( 9 )   ; if( Day_String.length()   < 2 ){ Day_String   = "0" + Day_String ; } 
+    String HH_String    = String( 7 )   ; if( HH_String.length()    < 2 ){ HH_String    = "0" + HH_String ; } 
+    String MM_String    = String( 6 )   ; if( MM_String.length()    < 2 ){ MM_String    = "0" + MM_String ; } 
+    String Master_Date = Year_String + Month_String + Day_String + HH_String + MM_String ;
+    //Serial.println( Master_Date.toInt() ) ; // 2302090706
+    Serial.print( "Flash     Address : 0x" ) ; Serial.println( flashAddress , HEX ) ; 
+    //flashAddress_Updated = Flash_PushToMemory_Time( 2302101615 , flashAddress , Enable_SerialPrint_Flash ) ;
     #endif
 
   } // if( RTC_Alarm_Flag == true )
