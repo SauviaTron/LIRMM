@@ -659,6 +659,7 @@ void GNSSClass::ppsCallback(class GNSSClass *self)
 
 void GNSSClass::GPS_Config( bool Enable_SerialPrint_GPS ){
 
+    pinMode( GNSS_en, OUTPUT ) ;
     pinMode(GNSS_backup, OUTPUT);
     digitalWrite(GNSS_backup, HIGH);
 
@@ -706,54 +707,54 @@ void GNSSClass::GPS_ReadUpdate( int GPS_TimeON, double *Lat, double *Long, unsig
     int now = millis() ;
     while( (millis()-now) <= GPS_TimeON * 1000 ){
 
-    if( GNSS.location(myLocation) ){
+        if( GNSS.location(myLocation) ){
 
-        Serial.print( (String)"LOCATION: " + fixTypeString[myLocation.fixType()]) ;
+            Serial.print( (String)"LOCATION: " + fixTypeString[myLocation.fixType()]) ;
 
-        if( GNSS.satellites(mySatellites) ){ Serial.print( (String)" - SATELLITES: " + mySatellites.count()) ; *NbSatellites = mySatellites.count() ;}
+            if( GNSS.satellites(mySatellites) ){ Serial.print( (String)" - SATELLITES: " + mySatellites.count()) ; *NbSatellites = mySatellites.count() ;}
 
-        if( myLocation.fixType() == GNSSLocation::TYPE_NONE ){ Serial.println( " " ) ; }
+            if( myLocation.fixType() == GNSSLocation::TYPE_NONE ){ Serial.println( " " ) ; }
 
-        if( myLocation.fixType() != GNSSLocation::TYPE_NONE ){
+            if( myLocation.fixType() != GNSSLocation::TYPE_NONE ){
 
-        GPS_Hour   = myLocation.hours()   ;
-        GPS_Minute = myLocation.minutes() ;
-        GPS_Second = myLocation.seconds() ;
-        GPS_Year   = myLocation.year()    ;
-        GPS_Month  = myLocation.month()   ;
-        GPS_Day    = myLocation.day()     ;
-        
-        Serial.print(fixQualityString[myLocation.fixQuality()]) ; Serial.print(" - ") ;
+                GPS_Hour   = myLocation.hours()   ;
+                GPS_Minute = myLocation.minutes() ;
+                GPS_Second = myLocation.seconds() ;
+                GPS_Year   = myLocation.year()    ;
+                GPS_Month  = myLocation.month()   ;
+                GPS_Day    = myLocation.day()     ;
+                
+                Serial.print(fixQualityString[myLocation.fixQuality()]) ; Serial.print(" - ") ;
 
-        Serial.print( GPS_Year + (String)"/" + GPS_Month + (String)"/" + GPS_Day + (String)" " ) ; 
+                Serial.print( GPS_Year + (String)"/" + GPS_Month + (String)"/" + GPS_Day + (String)" " ) ; 
 
-        if( GPS_Hour   <= 9){ Serial.print("0"); } Serial.print( GPS_Hour   + (String)":" ); 
-        if( GPS_Minute <= 9){ Serial.print("0"); } Serial.print( GPS_Minute + (String)":" ); 
-        if( GPS_Second <= 9){ Serial.print("0"); } Serial.print( GPS_Second + (String)" " ); 
+                if( GPS_Hour   <= 9){ Serial.print("0"); } Serial.print( GPS_Hour   + (String)":" ); 
+                if( GPS_Minute <= 9){ Serial.print("0"); } Serial.print( GPS_Minute + (String)":" ); 
+                if( GPS_Second <= 9){ Serial.print("0"); } Serial.print( GPS_Second + (String)" " ); 
 
-        // if( myLocation.leapSeconds() != GNSSLocation::LEAP_SECONDS_UNDEFINED) {
-        //   Serial.print(" ");
-        //   Serial.print(myLocation.leapSeconds());
-        //   if (!myLocation.fullyResolved()){ Serial.print("D") ; }
-        // }
+                // if( myLocation.leapSeconds() != GNSSLocation::LEAP_SECONDS_UNDEFINED) {
+                //   Serial.print(" ");
+                //   Serial.print(myLocation.leapSeconds());
+                //   if (!myLocation.fullyResolved()){ Serial.print("D") ; }
+                // }
 
-        if( myLocation.fixType() != GNSSLocation::TYPE_TIME ){
+                if( myLocation.fixType() != GNSSLocation::TYPE_TIME ){
 
-            *Lat  = myLocation.latitude()  ; myLocation.latitude(latOut);
-            *Long = myLocation.longitude() ; myLocation.longitude(longOut);
-            Alt  = myLocation.altitude()  ;
-            EHPE = myLocation.ehpe()      ; // use this as accuracy figure of merit
+                    *Lat  = myLocation.latitude()  ; myLocation.latitude(latOut);
+                    *Long = myLocation.longitude() ; myLocation.longitude(longOut);
+                    Alt  = myLocation.altitude()  ;
+                    EHPE = myLocation.ehpe()      ; // use this as accuracy figure of merit
 
-            Serial.print("- Coord: ");
-            Serial.print(*Lat, 7); Serial.print(","); Serial.print(*Long, 7); Serial.print(","); Serial.print(Alt, 3);
-            Serial.print(" - EHPE: "); Serial.print(EHPE, 3) ; 
-            Serial.print(" - SATELLITES fixed: "); Serial.println(myLocation.satellites());
+                    Serial.print("- Coord: ");
+                    Serial.print(*Lat, 7); Serial.print(","); Serial.print(*Long, 7); Serial.print(","); Serial.print(Alt, 3);
+                    Serial.print(" - EHPE: "); Serial.print(EHPE, 3) ; 
+                    Serial.print(" - SATELLITES fixed: "); Serial.println(myLocation.satellites());
 
-        } // if( myLocation.fixType() != GNSSLocation::TYPE_TIME )
+                } // if( myLocation.fixType() != GNSSLocation::TYPE_TIME )
 
-        } // if( myLocation.fixType() != GNSSLocation::TYPE_NONE )
+            } // if( myLocation.fixType() != GNSSLocation::TYPE_NONE )
 
-    } // if( GNSS.location(myLocation) )
+        } // if( GNSS.location(myLocation) )
 
     } //while( (millis()-now) <= 60000 )
 

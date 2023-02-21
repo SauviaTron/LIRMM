@@ -4,7 +4,7 @@
  *      E-mail: a-sauviat@laposte.net
  * 
  *  Description:  Ultra-low power 20 mm x 20 mm asset tracker consisting of :
- *                - CMWX1ZZABZ (SX1276 LoRa radio and STM32L082 host MCU)
+ *                - c (SX1276 LoRa radio and STM32L082 host MCU)
  *                - MAX M8Q concurrent GNSS module
  *                - LIS2DW12 accelerometer for wake-on-motion/sleep-on-no-motion functionality.
  *        
@@ -25,9 +25,9 @@
 /* >>> What to use ? <<< */
 #define Debug_Mode    true
 #define GNAT_L082CZ_  0
-#define Use_Acc       true 
-#define Use_GPS       true
-#define Use_LoRa      false
+#define Use_Acc       false 
+#define Use_GPS       false
+#define Use_LoRa      true
 
 
 /* >>> LoRa codes <<< */
@@ -78,6 +78,7 @@ char buffer[32];
 
 
 /* >>> Serial Println <<< */
+bool Enable_SerialPrint_Master  = true   ;
 bool Enable_SerialPrint_STM32   = true    ;
 bool Enable_SerialPrint_LED     = false   ;
 bool Enable_SerialPrint_Battery = true    ;
@@ -109,13 +110,15 @@ void setup(){
   STM32L0.wakeup();
 
   // put your setup code here, to run once:
-  Serial.begin(115200);
+  if( Enable_SerialPrint_Master == true ){ Serial.begin(115200) ; }
   if( Debug_Mode == true ){ while( !Serial ){} }
 
-  Serial.println("void setup()");
+  delay( 500 ) ;
+
+  Serial.println("void setup()") ;
 
   /* >>> BLUE LED <<< */
-  //STM32L0.BlueLED_Config(Enable_SerialPrint_LED);
+  STM32L0.BlueLED_Config(Enable_SerialPrint_LED);
 
   /* >>> Battery <<< */
   STM32L0.Battery_Config(Enable_SerialPrint_Battery);
@@ -137,7 +140,7 @@ void setup(){
   /* >>> MAX M8Q - GPS <<< */
   #if (Use_GPS == true)
   GNSS.GPS_Config(Enable_SerialPrint_GPS);
-  GNSS.GPS_First_Fix( &GPS_Latitude, &GPS_Longitude, &GPS_NbSatellites, Enable_SerialPrint_GPS );
+  //GNSS.GPS_First_Fix( &GPS_Latitude, &GPS_Longitude, &GPS_NbSatellites, Enable_SerialPrint_GPS );
   #endif
 
   /* >>> RTC <<< */
@@ -145,6 +148,8 @@ void setup(){
   RTC_Enable(Enable_SerialPrint_RTC);
 
   delay(5000);
+
+  STM32L0.BlueLED_OFF( Enable_SerialPrint_LED ) ;
 
 }
 
