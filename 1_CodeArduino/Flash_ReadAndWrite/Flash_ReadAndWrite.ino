@@ -24,7 +24,7 @@ uint8_t data[128]; // tableau pour stocker les données lues
 uint32_t count = 128; // nombre de données à lire
 
 uint32_t flashAddress = 0x08021980 ;
-uint32_t flashAddress_Updated ;
+uint32_t flashAddress_Updated = flashAddress ;
 
 
 // —————————————————————————————————————————————————————————————————————————————————————————————— //
@@ -43,19 +43,34 @@ void setup() {
   STM32L0.flashErase( flashAddress , 2 ) ;
 
 
-  if( 1 ){
 
-    Serial.print( "flashAddress : " ) ; Serial.println( flashAddress , HEX ) ;
-    flashAddress_Updated = Flash_PushToMemory_Time( 2302101615 , flashAddress , true ) ;
+
+}
+
+
+
+
+// —————————————————————————————————————————————————————————————————————————————————————————————— //
+//          LOOP()                                                                                //
+// —————————————————————————————————————————————————————————————————————————————————————————————— //
+
+void loop() {
+  
+  Serial.println("Hello Flash_Read.ino") ;
+
+    if( 1 ){
+
+    Serial.print( "flashAddress : " ) ; Serial.println( flashAddress_Updated , HEX ) ;
+    flashAddress_Updated = Flash_PushToMemory_Time( 2302101615 , flashAddress_Updated , true ) ;
     Serial.print( "flashAddress : " ) ; Serial.println( flashAddress_Updated , HEX ) ;
     flashAddress_Updated = Flash_PushToMemory_GPS( 43000000 , 3000000 , 15 , flashAddress_Updated , true ) ;
     Serial.print( "flashAddress : " ) ; Serial.println( flashAddress_Updated , HEX ) ;
 
-    flashAddress = 0x8021980 ;
+    // flashAddress = 0x8021980 ;
 
     if( 1 ){
 
-    Serial.print( "flashAddress : " ) ; Serial.println( flashAddress , HEX ) ;
+    Serial.print( "Flash ReadAddress : " ) ; Serial.println( 0x8021980 , HEX ) ;
 
     STM32L0.flashRead(flashAddress, data, count);
 
@@ -116,19 +131,6 @@ void setup() {
     }
   
   }
-
-}
-
-
-
-
-// —————————————————————————————————————————————————————————————————————————————————————————————— //
-//          LOOP()                                                                                //
-// —————————————————————————————————————————————————————————————————————————————————————————————— //
-
-void loop() {
-  
-  Serial.println("Hello Flash_Read.ino") ;
 
   delay(10000) ;
   
