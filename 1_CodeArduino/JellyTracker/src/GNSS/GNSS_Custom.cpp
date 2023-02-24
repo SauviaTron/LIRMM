@@ -699,7 +699,20 @@ void GNSSClass::GPS_OFF( bool Enable_SerialPrint_GPS ){
     if( Enable_SerialPrint_GPS == true ){ Serial.println("GPS state: OFF"); }
 } 
 
-void GNSSClass::GPS_ReadUpdate( int GPS_TimeON, double *Lat, double *Long, unsigned int *NbSatellites, bool Enable_SerialPrint_GPS ){
+/**
+ * @brief GPS MAX M8Q - Read GPS signals.
+ *
+ * @param GPS_TimeON Time while the module searches for GPS signals
+ * @param Lat GPS Latitude
+ * @param Long GPS Longitude
+ * @param NbSatellites GPS Number of satellites received
+ * @param Date One varaible that contain the GPS date (ex 2302231605 = 23/02/23 - 16H05)
+ * @param Enable_SerialPrint_GPS If true, serial printing is enabled, otherwise disabled.
+ * 
+ * @return Nothing BUT it's update the following values : Lat, Long, NbSatellites and Date.
+ * 
+ */
+void GNSSClass::GPS_ReadUpdate( int GPS_TimeON, double *Lat, double *Long, unsigned int *NbSatellites, uint32_t *Date, bool Enable_SerialPrint_GPS ){
 
     GNSSLocation myLocation;
     GNSSSatellites mySatellites;
@@ -717,12 +730,12 @@ void GNSSClass::GPS_ReadUpdate( int GPS_TimeON, double *Lat, double *Long, unsig
 
             if( myLocation.fixType() != GNSSLocation::TYPE_NONE ){
 
-                GPS_Hour   = myLocation.hours()   ;
-                GPS_Minute = myLocation.minutes() ;
-                GPS_Second = myLocation.seconds() ;
                 GPS_Year   = myLocation.year()    ;
                 GPS_Month  = myLocation.month()   ;
                 GPS_Day    = myLocation.day()     ;
+                GPS_Hour   = myLocation.hours()   ;
+                GPS_Minute = myLocation.minutes() ;
+                GPS_Second = myLocation.seconds() ;
                 
                 Serial.print(fixQualityString[myLocation.fixQuality()]) ; Serial.print(" - ") ;
 
@@ -732,11 +745,15 @@ void GNSSClass::GPS_ReadUpdate( int GPS_TimeON, double *Lat, double *Long, unsig
                 if( GPS_Minute <= 9){ Serial.print("0"); } Serial.print( GPS_Minute + (String)":" ); 
                 if( GPS_Second <= 9){ Serial.print("0"); } Serial.print( GPS_Second + (String)" " ); 
 
-                // if( myLocation.leapSeconds() != GNSSLocation::LEAP_SECONDS_UNDEFINED) {
-                //   Serial.print(" ");
-                //   Serial.print(myLocation.leapSeconds());
-                //   if (!myLocation.fullyResolved()){ Serial.print("D") ; }
-                // }
+                // Ex : GPS_Year = 2023   GPS_Month = 2   GPS_Day = 23   GPS_Hour = 16   GPS_Minute = 5 
+                // We want to create the following value : 2302231605
+                uint32_t Master_Date = GPS_Year % 100        ; // Master_Date = 23
+                Master_Date = Master_Date * 100 + GPS_Month  ; // Master_Date = 2300 + 2 = 2302
+                Master_Date = Master_Date * 100 + GPS_Day    ; // Master_Date = 230200 + 23 = 230223
+                Master_Date = Master_Date * 100 + GPS_Hour   ; // Master_Date = 23022300 + 16 = 23022316
+                Master_Date = Master_Date * 100 + GPS_Minute ; // Master_Date = 2302231600 + 5 = 2302231605
+
+                *Date = Master_Date ;
 
                 if( myLocation.fixType() != GNSSLocation::TYPE_TIME ){
 
@@ -760,7 +777,7 @@ void GNSSClass::GPS_ReadUpdate( int GPS_TimeON, double *Lat, double *Long, unsig
 
 }
 
-void GNSSClass::GPS_First_Fix( double *Lat, double *Long, unsigned int *NbSatellites, bool Enable_SerialPrint_GPS ){
+void GNSSClass::GPS_First_Fix( double *Lat, double *Long, unsigned int *NbSatellites, uint32_t *Date, bool Enable_SerialPrint_GPS ){
 
     EHPE = 999.99f;
 
@@ -768,7 +785,7 @@ void GNSSClass::GPS_First_Fix( double *Lat, double *Long, unsigned int *NbSatell
 
         EHPE = 999.99f;
 
-        GPS_ReadUpdate( 10 , Lat, Long, NbSatellites, Enable_SerialPrint_GPS );
+        GPS_ReadUpdate( 10 , Lat, Long, NbSatellites, Date, Enable_SerialPrint_GPS );
 
     } // while( EHPE >= 150.0 )
 

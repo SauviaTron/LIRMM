@@ -1,6 +1,6 @@
 {
     "configuration": "usb=cdc,speed=32,opt=os",
     "board": "TleraCorp:stm32l0:Gnat-L082CZ",
-    "port": "COM3",
+    "port": "COM4",
     "sketch": "Flash_ReadAndWrite.ino"
 }

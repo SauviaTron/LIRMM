@@ -22,34 +22,41 @@
 #include "src/CayenneLPP/CayenneLPP.h"  // Use Cayenne Low Power Payload
 
 
+
 /* >>> What to use ? <<< */
+
 #define Debug_Mode    true
 #define GNAT_L082CZ_  0
 #define Use_Acc       false 
-#define Use_GPS       false
-#define Use_LoRa      true
-#define Use_Flash     true
+#define Use_GPS       true
+#define Use_LoRa      false
+#define Use_Flash     false
+bool Enable_SerialPrint_Master  = true   ;
+bool Enable_SerialPrint_STM32   = true    ;
+bool Enable_SerialPrint_LED     = false   ;
+bool Enable_SerialPrint_Battery = true    ;
+bool Enable_SerialPrint_RTC     = true    ;
+bool Enable_SerialPrint_Acc     = true    ;
+bool Enable_SerialPrint_GPS     = true    ;
+bool Enable_SerialPrint_LoRa    = true    ;
+bool Enable_SerialPrint_Flash   = true    ;
 
-
-/* >>> LoRa codes <<< */
-#if ( GNAT_L082CZ_ == 0 )
-const char *devEui = "70B3D57ED004E6DC";
-const char *appEui = "0000000000000000";
-const char *appKey = "F1DDBCC3E8DFB001D00462D9232B5096";
-int Time_Device_Sleep = 30 ; // - seconds
-#endif
 
 
 /* >>> STM32 <<< */
+
 bool STM32_Sleeping = false   ;
 float STM32_Temperature_float ; // Updated by the function - void STM32_Temperature( bool Enable_SerialPrint_STM32 )
 float BatteryTension ;
 
 
+
 /* >>> RTC <<< */
+
 bool RTC_Alarm_Flag   = true ;
 int  RTC_Timer_count  = 0    ;
 int  RTC_Timer_Rescue = 100  ; 
+
 
 
 /* >>> LIS2DW12 - Accelerometer <<< */
@@ -70,31 +77,34 @@ LIS2DW12 LIS2DW12(&I2C); // instantiate LIS2DW12 class
 int GPS_TimerON = 45 ;
 double GPS_Longitude, GPS_Latitude ;
 unsigned int GPS_NbSatellites ;
-#endif
-
-#if( Use_Flash == true )
-uint8_t data[128]; // tableau pour stocker les données lues
-uint32_t Flash_count = 128; // nombre de données à lir
-uint32_t flashAddress = 0x08021980 ;
-uint32_t flashAddress_Updated ;
+uint32_t Date ;
 #endif
 
 
 /* >>> LoRa <<< */
+#if( Use_LoRa == true )
 CayenneLPP CayenneLPPayload(64) ;
 char buffer[32];
 
+/* >>> LoRa codes <<< */
+#if ( GNAT_L082CZ_ == 0 )
+const char *devEui = "70B3D57ED004E6DC";
+const char *appEui = "0000000000000000";
+const char *appKey = "F1DDBCC3E8DFB001D00462D9232B5096";
+int Time_Device_Sleep = 30 ; // - seconds
+#endif
 
-/* >>> Serial Println <<< */
-bool Enable_SerialPrint_Master  = true   ;
-bool Enable_SerialPrint_STM32   = true    ;
-bool Enable_SerialPrint_LED     = false   ;
-bool Enable_SerialPrint_Battery = true    ;
-bool Enable_SerialPrint_RTC     = true    ;
-bool Enable_SerialPrint_Acc     = true    ;
-bool Enable_SerialPrint_GPS     = true    ;
-bool Enable_SerialPrint_LoRa    = true    ;
-bool Enable_SerialPrint_Flash   = true    ;
+#endif
+
+
+/* >>> Flash <<< */
+#if( Use_Flash == true )
+uint8_t data[128]; // tableau pour stocker les données lues
+uint32_t Flash_count = 128; // nombre de données à lir
+uint32_t flashAddress = 0x08021980 ;
+uint32_t flashAddress_Updated = flashAddress ;
+#endif
+
 
 
 /* >>> Functions <<< */
@@ -132,14 +142,6 @@ void setup(){
   /* >>> Battery <<< */
   STM32L0.Battery_Config(Enable_SerialPrint_Battery);
 
-
-  // Info about LoRa
-
-  #if (Use_LoRa == true)
-  LoRaWAN.Config_And_JoinOTAA( devEui, appEui, appKey,  Enable_SerialPrint_LoRa );
-  // LoRa_Config( Enable_SerialPrint_LoRa ) ;
-  #endif
-
   /* >>> LIS2DW12 - Acc <<< */
   #if (Use_Acc == true)
   I2C.Config_And_Scan( I2C_Frequency ) ;
@@ -149,12 +151,12 @@ void setup(){
   /* >>> MAX M8Q - GPS <<< */
   #if (Use_GPS == true)
   GNSS.GPS_Config(Enable_SerialPrint_GPS);
-  //GNSS.GPS_First_Fix( &GPS_Latitude, &GPS_Longitude, &GPS_NbSatellites, Enable_SerialPrint_GPS );
+  GNSS.GPS_First_Fix( &GPS_Latitude, &GPS_Longitude, &GPS_NbSatellites, &Date, Enable_SerialPrint_GPS );
   #endif
 
-  /* >>> Flash - 196kB <<< */
-  #if ( Use_Flash == true )
-  //STM32L0.flashErase( flashAddress , 2 ) ;
+  /* >>> LoRa <<< */
+  #if (Use_LoRa == true)
+  LoRaWAN.Config_And_JoinOTAA( devEui, appEui, appKey,  Enable_SerialPrint_LoRa );
   #endif
 
   /* >>> RTC <<< */
@@ -165,7 +167,7 @@ void setup(){
 
   STM32L0.BlueLED_OFF( Enable_SerialPrint_LED ) ;
 
-}
+} // void setup()
 
 // —————————————————————————————————————————————————————————————————————————————————————————————— //
 //          LOOP()                                                                                //
@@ -177,8 +179,6 @@ void loop() {
 
   if (RTC_Alarm_Flag == true){
     RTC_Alarm_Flag = false;
-
-    // Serial.println(">>> Your program <<<");
 
     STM32_Temperature_float = STM32L0.STM32_Temperature( Enable_SerialPrint_STM32 ) ;
     BatteryTension = STM32L0.Battery_GetTension( Enable_SerialPrint_Battery ) ;
@@ -193,8 +193,11 @@ void loop() {
     #if (Use_GPS == true)
     RTC_Disable(Enable_SerialPrint_RTC); delay(100);
     GNSS.GPS_ON(Enable_SerialPrint_GPS); delay(100);
-    GNSS.GPS_ReadUpdate( GPS_TimerON, &GPS_Latitude, &GPS_Longitude, &GPS_NbSatellites, Enable_SerialPrint_GPS); delay(100);
+    GNSS.GPS_ReadUpdate( GPS_TimerON, &GPS_Latitude, &GPS_Longitude, &GPS_NbSatellites, &Date, Enable_SerialPrint_GPS); delay(100);
     GNSS.GPS_OFF(Enable_SerialPrint_GPS); delay(100);
+    Serial.print( "GPS date : " ) ; Serial.println( Date ) ;
+    Serial.print( "GPS Lat : " ) ; Serial.println( GPS_Latitude ) ;
+    Serial.print( "GPS Long : " ) ; Serial.println( GPS_Longitude ) ;
     RTC_Enable(Enable_SerialPrint_RTC);
     #endif
 
@@ -203,22 +206,15 @@ void loop() {
     #endif
 
     #if( Use_Flash == true )
-    String Year_String  = String( 23 )  ;
-    String Month_String = String( 2 )   ; if( Month_String.length() < 2 ){ Month_String = "0" + Month_String ; } 
-    String Day_String   = String( 9 )   ; if( Day_String.length()   < 2 ){ Day_String   = "0" + Day_String ; } 
-    String HH_String    = String( 7 )   ; if( HH_String.length()    < 2 ){ HH_String    = "0" + HH_String ; } 
-    String MM_String    = String( 6 )   ; if( MM_String.length()    < 2 ){ MM_String    = "0" + MM_String ; } 
-    String Master_Date = Year_String + Month_String + Day_String + HH_String + MM_String ;
-    //Serial.println( Master_Date.toInt() ) ; // 2302090706
-    Serial.print( "Flash     Address : 0x" ) ; Serial.println( flashAddress , HEX ) ; 
-    //flashAddress_Updated = Flash_PushToMemory_Time( 2302101615 , flashAddress , Enable_SerialPrint_Flash ) ;
+    Serial.print( "Flash    Address : 0x" ) ; Serial.println( flashAddress_Updated , HEX ) ; 
+    //flashAddress_Updated = Flash_PushToMemory_Time( 2302101615 , flashAddress_Updated , Enable_SerialPrint_Flash ) ;
     #endif
 
   } // if( RTC_Alarm_Flag == true )
 
   STM32_Sleeping = STM32L0.STM32_StopMode(Enable_SerialPrint_STM32);
 
-}
+} // void loop()
 
 // —————————————————————————————————————————————————————————————————————————————————————————————— //
 //          FUNCTIONS                                                                             //
