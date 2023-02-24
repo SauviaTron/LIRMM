@@ -79,6 +79,9 @@ void setup(){
 
   STM32L0.BlueLED_OFF( Enable_SerialPrint_LED ) ;
 
+  RTC_Config( Enable_SerialPrint_RTC ) ;
+  RTC_Enable( Enable_SerialPrint_RTC ) ;
+
 } // void setup()
 
 // —————————————————————————————————————————————————————————————————————————————————————————————— //
@@ -103,7 +106,7 @@ void loop() {
     delay( 1000 ) ;
 
     STM32L0.BlueLED_ON( Enable_SerialPrint_LED ) ;
-    delay(100);
+    delay(500);
     STM32L0.BlueLED_OFF( Enable_SerialPrint_LED ) ;
 
     delay( 1000 );
@@ -142,7 +145,7 @@ void RTC_Config( bool Enable_SerialPrint_RTC ){
  *
  */
 void RTC_Enable( bool Enable_SerialPrint_RTC ){
-  RTC.enableAlarm(RTC.MATCH_SS)         ; // Alarm once per second
+  RTC.enableAlarm(RTC.MATCH_Every_10s)         ; // Alarm once per second
   if(Enable_SerialPrint_RTC == true ){ Serial.println("RTC enable.") ; };
 }
 
@@ -172,13 +175,13 @@ void RTC_Disable( bool Enable_SerialPrint_RTC ){
 void RTC_Alarm_Fct_WakeUp() {
 
   //if( STM32L0.resetCause() == 1 ){RTC_Timer_count = RTC_Timer_count + 1 ;}
-  RTC_Timer_count = RTC_Timer_count + 1 ;
-  if( RTC_Timer_count == RTC_Timer_Rescue ){
-    Serial.println( "RTC: Rescue mode") ;
-    RTC_Disable( Enable_SerialPrint_RTC ) ;
-    RTC.enableAlarm( RTC.MATCH_Every_2s);
-    RTC.attachInterrupt( RTC_Alarm_Fct_WakeUp ) ;
-  }
+  // RTC_Timer_count = RTC_Timer_count + 1 ;
+  // if( RTC_Timer_count == RTC_Timer_Rescue ){
+  //   Serial.println( "RTC: Rescue mode") ;
+  //   RTC_Disable( Enable_SerialPrint_RTC ) ;
+  //   RTC.enableAlarm( RTC.MATCH_Every_2s);
+  //   RTC.attachInterrupt( RTC_Alarm_Fct_WakeUp ) ;
+  // }
 
   // Serial.println( (String)"RTC_Timer_count = " + RTC_Timer_count ) ;
 
