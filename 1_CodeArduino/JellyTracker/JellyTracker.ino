@@ -195,9 +195,6 @@ void loop() {
     GNSS.GPS_ON(Enable_SerialPrint_GPS); delay(100);
     GNSS.GPS_ReadUpdate( GPS_TimerON, &GPS_Latitude, &GPS_Longitude, &GPS_NbSatellites, &Date, Enable_SerialPrint_GPS); delay(100);
     GNSS.GPS_OFF(Enable_SerialPrint_GPS); delay(100);
-    Serial.print( "GPS date : " ) ; Serial.println( Date ) ;
-    Serial.print( "GPS Lat : " ) ; Serial.println( GPS_Latitude ) ;
-    Serial.print( "GPS Long : " ) ; Serial.println( GPS_Longitude ) ;
     RTC_Enable(Enable_SerialPrint_RTC);
     #endif
 
