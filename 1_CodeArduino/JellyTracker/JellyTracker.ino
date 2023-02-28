@@ -28,9 +28,10 @@
 #define Debug_Mode    true
 #define GNAT_L082CZ_  0
 #define Use_Acc       false 
-#define Use_GPS       true
-#define Use_LoRa      false
+#define Use_GPS       false
+#define Use_LoRa      true
 #define Use_Flash     false
+
 bool Enable_SerialPrint_Master  = true   ;
 bool Enable_SerialPrint_STM32   = true    ;
 bool Enable_SerialPrint_LED     = false   ;
