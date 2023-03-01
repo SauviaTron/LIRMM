@@ -25,9 +25,9 @@
 
 /* >>> What to use ? <<< */
 
-#define Debug_Mode    true
+#define Debug_Mode    false
 #define GNAT_L082CZ_  0
-#define Use_Acc       false 
+#define Use_Acc       true 
 #define Use_GPS       false
 #define Use_LoRa      true
 #define Use_Flash     false
@@ -181,8 +181,11 @@ void loop() {
   if (RTC_Alarm_Flag == true){
     RTC_Alarm_Flag = false;
 
+    delay(1000) ;
     STM32_Temperature_float = STM32L0.STM32_Temperature( Enable_SerialPrint_STM32 ) ;
+    delay(1000) ;
     BatteryTension = STM32L0.Battery_GetTension( Enable_SerialPrint_Battery ) ;
+    delay(1000) ;
 
     #if (Use_Acc == true)
     LIS2DW12.powerUp( LIS2DW12_ODR_12_5_1_6HZ ) ;
@@ -201,12 +204,16 @@ void loop() {
 
     #if( Use_LoRa == true )
     LoRa_SendPayload( Enable_SerialPrint_LoRa ) ;
+    delay(1000);
     #endif
+   
 
     #if( Use_Flash == true )
     Serial.print( "Flash    Address : 0x" ) ; Serial.println( flashAddress_Updated , HEX ) ; 
-    //flashAddress_Updated = Flash_PushToMemory_Time( 2302101615 , flashAddress_Updated , Enable_SerialPrint_Flash ) ;
+    flashAddress_Updated = Flash_PushToMemory_Time( 2302101615 , flashAddress_Updated , Enable_SerialPrint_Flash ) ;
     #endif
+
+    delay(1000) ;
 
   } // if( RTC_Alarm_Flag == true )
 
@@ -242,7 +249,7 @@ void RTC_Config( bool Enable_SerialPrint_RTC ){
  *
  */
 void RTC_Enable( bool Enable_SerialPrint_RTC ){
-  RTC.enableAlarm(RTC.MATCH_SS)         ; // Alarm once per second
+  RTC.enableAlarm(RTC.MATCH_Every_30s)         ; // Alarm once per second
   if(Enable_SerialPrint_RTC == true ){ Serial.println("RTC enable.") ; };
 }
 

@@ -37,7 +37,7 @@
             "cStandard": "c11",
             "cppStandard": "c++11",
             "defines": [
-                "_SYSTEM_CORE_CLOCK_=32000000L",
+                "_SYSTEM_CORE_CLOCK_=16000000L",
                 "ARDUINO=10607",
                 "ARDUINO_STM32L0_GNAT",
                 "ARDUINO_ARCH_STM32L0",
