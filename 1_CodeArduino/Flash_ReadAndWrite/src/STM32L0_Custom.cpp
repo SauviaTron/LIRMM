@@ -247,4 +247,60 @@ bool STM32L0Class::flashRead( uint32_t address, uint8_t *data, uint32_t count)
 
 }
 
+void STM32L0Class::Flash_Print_Data( uint8_t *data, uint32_t count ){
+
+    int Nb_Data_Display = 0 ;
+    int Flash_Nb_Cell = 1 ;
+
+    for (int i = 0; i < count; i++) {
+      
+        if( Nb_Data_Display == 0 ){ 
+          if( Flash_Nb_Cell <= 9 ){
+            Serial.print( (String)"Cell n 0" + Flash_Nb_Cell) ; Serial.print("\t") ;
+            Flash_Nb_Cell += 1 ; 
+          }
+          else{
+            Serial.print( (String)"Cell n " + Flash_Nb_Cell) ; Serial.print("\t") ;
+            Flash_Nb_Cell += 1 ; 
+          }
+        }
+        
+        String data_i_string = String( data[i] , BIN ) ;
+        // Serial.println( (String)"Taille string : " + data_i_string ) ; 
+        switch( data_i_string.length() ){
+          case 8 :
+            Serial.print(data[i], BIN); Serial.print(" ");
+            break ;
+          case 7 :
+            Serial.print( "0" ) ; Serial.print(data[i], BIN); Serial.print(" ");
+            break ;
+          case 6 :
+            Serial.print( "00" ) ; Serial.print(data[i], BIN); Serial.print(" ");
+            break ;
+          case 5 :
+            Serial.print( "000" ) ; Serial.print(data[i], BIN); Serial.print(" ");
+            break ;
+          case 4 :
+            Serial.print( "0000" ) ; Serial.print(data[i], BIN); Serial.print(" ");
+            break ;
+          case 3 :
+            Serial.print( "00000" ) ; Serial.print(data[i], BIN); Serial.print(" ");
+            break ;
+          case 2 :
+            Serial.print( "000000" ) ; Serial.print(data[i], BIN); Serial.print(" ");
+            break ;
+          case 1 :
+            Serial.print( "0000000" ) ; Serial.print(data[i], BIN); Serial.print(" ");
+            break ;
+        } // switch( data_i_string.length() )
+
+        Nb_Data_Display += 1 ;
+        if( Nb_Data_Display == 4 ){
+          Serial.println(" "); 
+          Nb_Data_Display = 0 ;
+        }
+
+    }
+}
+
 STM32L0Class STM32L0;

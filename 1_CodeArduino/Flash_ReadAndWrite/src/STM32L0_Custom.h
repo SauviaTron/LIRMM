@@ -71,6 +71,8 @@ public:
     bool     flashErase(uint32_t address, uint32_t count);
     bool     flashProgram(uint32_t address, const void *data, uint32_t count);
     bool     flashRead( uint32_t address, uint8_t *data, uint32_t count);
+
+    void Flash_Print_Data( uint8_t *data, uint32_t count ) ;
 };
 
 extern STM32L0Class STM32L0;

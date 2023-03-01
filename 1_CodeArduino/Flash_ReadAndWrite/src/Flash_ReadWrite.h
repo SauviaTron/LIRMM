@@ -3,7 +3,7 @@
 
 
 uint32_t Flash_PushToMemory_Time( int Date_YYMMDDHHMM , uint32_t flashAddress , bool Enable_SerialPrint_Flash );
-uint32_t Flash_PushToMemory_GPS( int GPS_Latitude, int GPS_Longitude , int GPS_NbSatellites , uint32_t flashAddress , bool Enable_SerialPrint_Flash );
+uint32_t Flash_PushToMemory_GPS( int GPS_Latitude, int GPS_Longitude_And_NbSatellites , uint32_t flashAddress , bool Enable_SerialPrint_Flash );
 uint32_t Flash_PushToMemory_Acc( int Acc_X , int Acc_Y , int Acc_Z , int Acc_Temp , uint32_t flashAddress , bool Enable_SerialPrint_Flash );
 uint32_t Flash_PushToMemory_Vbat_LoRa( int Vbat , int LoRa_Busy , int LoRa_Joined , uint32_t flashAddress , bool Enable_SerialPrint_Flash );
 
