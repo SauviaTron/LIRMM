@@ -1,5 +1,5 @@
 {
-    "configuration": "usb=cdc,speed=16,opt=os",
+    "configuration": "usb=cdc,speed=32,opt=os",
     "board": "TleraCorp:stm32l0:Gnat-L082CZ",
     "port": "COM4",
     "sketch": "JellyTracker.ino"

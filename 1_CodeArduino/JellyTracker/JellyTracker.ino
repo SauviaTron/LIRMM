@@ -27,8 +27,8 @@
 
 #define Debug_Mode    false
 #define GNAT_L082CZ_  0
-#define Use_Acc       true 
-#define Use_GPS       false
+#define Use_Acc       false 
+#define Use_GPS       flase
 #define Use_LoRa      true
 #define Use_Flash     false
 
@@ -86,6 +86,8 @@ uint32_t Date ;
 #if( Use_LoRa == true )
 CayenneLPP CayenneLPPayload(64) ;
 char buffer[32];
+int LoRaWAN_Busy ;
+int LoRaWAN_Joined ;
 
 /* >>> LoRa codes <<< */
 #if ( GNAT_L082CZ_ == 0 )
@@ -130,7 +132,7 @@ void setup(){
   STM32L0.wakeup();
 
   // put your setup code here, to run once:
-  if( Enable_SerialPrint_Master == true ){ Serial.begin(115200) ; }
+  if( Enable_SerialPrint_Master == true ){ Serial.begin(115200) ; delay(500); }
   if( Debug_Mode == true ){ while( !Serial ){} }
 
   delay( 500 ) ;
@@ -164,6 +166,8 @@ void setup(){
   RTC_Config(Enable_SerialPrint_RTC);
   RTC_Enable(Enable_SerialPrint_RTC);
 
+  //STM32L0.flashErase( flashAddress , 2 ) ;
+
   delay(5000);
 
   STM32L0.BlueLED_OFF( Enable_SerialPrint_LED ) ;
@@ -187,12 +191,15 @@ void loop() {
     BatteryTension = STM32L0.Battery_GetTension( Enable_SerialPrint_Battery ) ;
     delay(1000) ;
 
+
     #if (Use_Acc == true)
     LIS2DW12.powerUp( LIS2DW12_ODR_12_5_1_6HZ ) ;
     LIS2DW12.Acc_Get_Temperature( &LIS2DWS12_Temp_Raw , &LIS2DWS12_Temperature , Enable_SerialPrint_Acc ) ;
     LIS2DW12.Acc_Get_XYZ_Data( &Acc_X, &Acc_Y, &Acc_Z, Enable_SerialPrint_Acc);
     LIS2DW12.powerDown();
+    delay(1000) ;
     #endif
+
 
     #if (Use_GPS == true)
     RTC_Disable(Enable_SerialPrint_RTC); delay(100);
@@ -200,7 +207,9 @@ void loop() {
     GNSS.GPS_ReadUpdate( GPS_TimerON, &GPS_Latitude, &GPS_Longitude, &GPS_NbSatellites, &Date, Enable_SerialPrint_GPS); delay(100);
     GNSS.GPS_OFF(Enable_SerialPrint_GPS); delay(100);
     RTC_Enable(Enable_SerialPrint_RTC);
+    delay(1000) ;
     #endif
+
 
     #if( Use_LoRa == true )
     LoRa_SendPayload( Enable_SerialPrint_LoRa ) ;
@@ -209,11 +218,25 @@ void loop() {
    
 
     #if( Use_Flash == true )
-    Serial.print( "Flash    Address : 0x" ) ; Serial.println( flashAddress_Updated , HEX ) ; 
-    flashAddress_Updated = Flash_PushToMemory_Time( 2302101615 , flashAddress_Updated , Enable_SerialPrint_Flash ) ;
+
+    Serial.print( "Time flashAddress \t" ) ; Serial.print( flashAddress_Updated , HEX ) ; Serial.print("\t") ;
+    flashAddress_Updated = Flash_PushToMemory_Time( Date , flashAddress_Updated , Enable_SerialPrint_Flash ) ;
+
+    Serial.print( "GPS flashAddress \t" ) ; Serial.print( flashAddress_Updated , HEX ) ; Serial.print("\t") ;
+    int GPS_Latitude_4_Flash = GPS_Latitude * 1000000 ;
+    int GPS_Longitude_4_Flash = GPS_Longitude * 1000000 ;
+    int GPS_Longitude_And_NbSatellites = GPS_Longitude_4_Flash * 100 + GPS_NbSatellites ;
+    flashAddress_Updated = Flash_PushToMemory_GPS( GPS_Latitude , GPS_Longitude_And_NbSatellites , flashAddress_Updated , Enable_SerialPrint_Flash ) ;
+
+    Serial.print( "Acc flashAddress \t" ) ; Serial.print( flashAddress_Updated , HEX ) ; Serial.print("\t") ;
+    flashAddress_Updated = Flash_PushToMemory_Acc( 1 , 2 , 3 , (int)LIS2DWS12_Temperature , flashAddress_Updated , Enable_SerialPrint_Flash ) ;
+
+    Serial.print( "Other flashAddress \t" ) ; Serial.print( flashAddress_Updated , HEX ) ; Serial.print("\t") ;
+    int VBattery = BatteryTension * 10 ;
+    flashAddress_Updated = Flash_PushToMemory_Vbat_LoRa( VBattery , LoRaWAN_Busy , LoRaWAN_Joined , flashAddress_Updated , Enable_SerialPrint_Flash ) ;
+    delay(1000) ;
     #endif
 
-    delay(1000) ;
 
   } // if( RTC_Alarm_Flag == true )
 
@@ -249,7 +272,7 @@ void RTC_Config( bool Enable_SerialPrint_RTC ){
  *
  */
 void RTC_Enable( bool Enable_SerialPrint_RTC ){
-  RTC.enableAlarm(RTC.MATCH_Every_30s)         ; // Alarm once per second
+  RTC.enableAlarm(RTC.MATCH_SS)         ; // Alarm once per second
   if(Enable_SerialPrint_RTC == true ){ Serial.println("RTC enable.") ; };
 }
 
@@ -324,21 +347,24 @@ void LoRa_Config(bool Enable_SerialPrint_LoRa){
 
 void LoRa_SendPayload( bool Enable_SerialPrint_LoRa ) {
 
-  // --- Send Data to LoRa --- //
-  if( Enable_SerialPrint_LoRa == true ){
-    Serial.println( (String)"LoRaWAN: Busy   " + LoRaWAN.busy() )   ; // Display state of LoRa - 0 for false (= available) - 1 for true (= busy)
-    Serial.println( (String)".        Joined " + LoRaWAN.joined() ) ; // Display LoRa connection - 0 for false (= not joined) - 1 for true (= joined)
-  }
-
   if ( !LoRaWAN.busy() && LoRaWAN.joined() ) { // if LoRa available (not(0)=1=true) AND LoRa joined then 
+
+    LoRaWAN_Busy = 0 ; LoRaWAN_Joined = 1 ;
 
     CayenneLPPayload.reset(); // Reset writing payload
 
     CayenneLPPayload.addTemperature( 1 , STM32_Temperature_float ) ;
     CayenneLPPayload.addBatteryLevel( 2 , BatteryTension ) ;
+    float Acc_X = 1.0 ;
+    float Acc_Y = 2.0 ;
+    float Acc_Z = 3.0 ;
+    float LIS2DWS12_Temperature = 25.0 ;
+    CayenneLPPayload.addAccelerometer_And_Temperature( 3 , Acc_X, Acc_Y, Acc_Z, LIS2DWS12_Temperature)          ; // add Accelerometer
+    
     #if( Use_Acc == true )
-    CayenneLPPayload.addTemperature( 3 , LIS2DWS12_Temperature ) ; 
-    CayenneLPPayload.addAccelerometer( 3 , Acc_X, Acc_Y, Acc_Z)          ; // add Accelerometer
+    // CayenneLPPayload.addTemperature( 3 , LIS2DWS12_Temperature ) ; 
+    // CayenneLPPayload.addAccelerometer( 3 , Acc_X, Acc_Y, Acc_Z)          ; // add Accelerometer
+    CayenneLPPayload.addAccelerometer_And_Temperature( 3 , Acc_X, Acc_Y, Acc_Z, LIS2DWS12_Temperature)          ; // add Accelerometer
     #endif
     #if( Use_GPS == true )
     // double GPS_Latitude = 43.123456 ; 
@@ -348,10 +374,21 @@ void LoRa_SendPayload( bool Enable_SerialPrint_LoRa ) {
   
     LoRaWAN.sendPacket(CayenneLPPayload.getBuffer(), CayenneLPPayload.getSize());
 
-    if( Enable_SerialPrint_LoRa == true ){ Serial.println(".        Msg send") ; } // Display a msg
+    if( Enable_SerialPrint_LoRa == true ){ 
+      Serial.println( (String)"LoRaWAN: Busy   " + LoRaWAN_Busy )   ; // Display state of LoRa - 0 for false (= available) - 1 for true (= busy)
+      Serial.println( (String)".        Joined " + LoRaWAN_Joined ) ; // Display LoRa connection - 0 for false (= not joined) - 1 for true (= joined)
+      Serial.println(         ".        Msg send") ; 
+    }
 
   } // if ( !LoRaWAN.busy() && LoRaWAN.joined() )
-  else{ if( Enable_SerialPrint_LoRa == true ){ Serial.println(".        Msg not send") ; } } // Display a msg
+  else{ 
+    LoRaWAN_Busy = 1 ; LoRaWAN_Joined = 1 ;
+    if( Enable_SerialPrint_LoRa == true ){ 
+      Serial.println( (String)"LoRaWAN: Busy   " + LoRaWAN_Busy )   ; // Display state of LoRa - 0 for false (= available) - 1 for true (= busy)
+      Serial.println( (String)".        Joined " + LoRaWAN_Joined ) ; // Display LoRa connection - 0 for false (= not joined) - 1 for true (= joined)
+      Serial.println(         ".        Msg not send") ; 
+    }
+  } // Display a msg
 
 }
 
