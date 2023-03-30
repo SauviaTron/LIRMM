@@ -42,7 +42,7 @@ volatile bool ppsFlag = false, firstSync = false, alarmFlag = true;
 uint16_t count = 0, fixType = 0, fixQuality;
 int32_t latOut, longOut;
 
-float Alt, EHPE;
+float Alt ;
 
 // double Lat, Long ;
 // unsigned int NbSatellites ;
@@ -712,7 +712,7 @@ void GNSSClass::GPS_OFF( bool Enable_SerialPrint_GPS ){
  * @return Nothing BUT it's update the following values : Lat, Long, NbSatellites and Date.
  * 
  */
-void GNSSClass::GPS_ReadUpdate( int GPS_TimeON, double *Lat, double *Long, unsigned int *NbSatellites, uint32_t *Date, bool Enable_SerialPrint_GPS ){
+void GNSSClass::GPS_ReadUpdate( int GPS_TimeON, double *Lat, double *Long, unsigned int *NbSatellites, float *EHPE, uint32_t *Date, bool Enable_SerialPrint_GPS ){
 
     GNSSLocation myLocation;
     GNSSSatellites mySatellites;
@@ -760,11 +760,11 @@ void GNSSClass::GPS_ReadUpdate( int GPS_TimeON, double *Lat, double *Long, unsig
                     *Lat  = myLocation.latitude()  ; myLocation.latitude(latOut);
                     *Long = myLocation.longitude() ; myLocation.longitude(longOut);
                     Alt  = myLocation.altitude()  ;
-                    EHPE = myLocation.ehpe()      ; // use this as accuracy figure of merit
+                    *EHPE = myLocation.ehpe()      ; // use this as accuracy figure of merit
 
                     Serial.print("- Coord: ");
                     Serial.print(*Lat, 7); Serial.print(","); Serial.print(*Long, 7); Serial.print(","); Serial.print(Alt, 3);
-                    Serial.print(" - EHPE: "); Serial.print(EHPE, 3) ; 
+                    Serial.print(" - EHPE: "); Serial.print(*EHPE, 3) ; 
                     Serial.print(" - SATELLITES fixed: "); Serial.println(myLocation.satellites());
 
                 } // if( myLocation.fixType() != GNSSLocation::TYPE_TIME )
@@ -777,15 +777,15 @@ void GNSSClass::GPS_ReadUpdate( int GPS_TimeON, double *Lat, double *Long, unsig
 
 }
 
-void GNSSClass::GPS_First_Fix( double *Lat, double *Long, unsigned int *NbSatellites, uint32_t *Date, bool Enable_SerialPrint_GPS ){
+void GNSSClass::GPS_First_Fix( double *Lat, double *Long, unsigned int *NbSatellites, float *EHPE, uint32_t *Date, bool Enable_SerialPrint_GPS ){
 
-    EHPE = 999.99f;
+    *EHPE = 999.99f;
 
-    while (EHPE >= 150.0){ // Waiting to have a "good" EHPE
+    while (*EHPE >= 150.0){ // Waiting to have a "good" EHPE
 
-        EHPE = 999.99f;
+        *EHPE = 999.99f;
 
-        GPS_ReadUpdate( 10 , Lat, Long, NbSatellites, Date, Enable_SerialPrint_GPS );
+        GPS_ReadUpdate( 10 , Lat, Long, NbSatellites, EHPE, Date, Enable_SerialPrint_GPS );
 
     } // while( EHPE >= 150.0 )
 
