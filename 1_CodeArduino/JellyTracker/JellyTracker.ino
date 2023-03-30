@@ -19,16 +19,17 @@
 #include "src/GNSS/GNSS_Custom.h"        // Use GPS - MAX M8Q
 #include "src/STM32L0/Flash_ReadWrite.h"    // Use 196kB Flash Memory of the STM32L082CZ 
 #include "src/LoRaWAN/LoRaWAN.h"            // Use LoRaWAN
-#include "src/CayenneLPP/CayenneLPP.h"  // Use Cayenne Low Power Payload
+//#include "src/CayenneLPP/CayenneLPP.h"  // Use Cayenne Low Power Payload
+#include "src/MyLPP/MyLPP.h"  // Use Cayenne Low Power Payload
 
 
 
 /* >>> What to use ? <<< */
 
 #define Debug_Mode    false
-#define GNAT_L082CZ_  0
-#define Use_Acc       false 
-#define Use_GPS       flase
+#define GNAT_L082CZ_  1
+#define Use_Acc       true 
+#define Use_GPS       true
 #define Use_LoRa      true
 #define Use_Flash     false
 
@@ -78,13 +79,14 @@ LIS2DW12 LIS2DW12(&I2C); // instantiate LIS2DW12 class
 int GPS_TimerON = 45 ;
 double GPS_Longitude, GPS_Latitude ;
 unsigned int GPS_NbSatellites ;
+float GPS_EHPE ; 
 uint32_t Date ;
 #endif
 
 
 /* >>> LoRa <<< */
 #if( Use_LoRa == true )
-CayenneLPP CayenneLPPayload(64) ;
+MyLPP MyLPPayload(64) ;
 char buffer[32];
 int LoRaWAN_Busy ;
 int LoRaWAN_Joined ;
@@ -94,6 +96,13 @@ int LoRaWAN_Joined ;
 const char *devEui = "70B3D57ED004E6DC";
 const char *appEui = "0000000000000000";
 const char *appKey = "F1DDBCC3E8DFB001D00462D9232B5096";
+int Time_Device_Sleep = 30 ; // - seconds
+#endif
+
+#if ( GNAT_L082CZ_ == 1 )
+const char *devEui = "70B3D57ED004D52E";
+const char *appEui = "0000000000000000";
+const char *appKey = "ABF062CA74B1A11A247387B2EF49392F";
 int Time_Device_Sleep = 30 ; // - seconds
 #endif
 
@@ -154,7 +163,7 @@ void setup(){
   /* >>> MAX M8Q - GPS <<< */
   #if (Use_GPS == true)
   GNSS.GPS_Config(Enable_SerialPrint_GPS);
-  GNSS.GPS_First_Fix( &GPS_Latitude, &GPS_Longitude, &GPS_NbSatellites, &Date, Enable_SerialPrint_GPS );
+  GNSS.GPS_First_Fix( &GPS_Latitude, &GPS_Longitude, &GPS_NbSatellites, &GPS_EHPE, &Date, Enable_SerialPrint_GPS );
   #endif
 
   /* >>> LoRa <<< */
@@ -204,7 +213,7 @@ void loop() {
     #if (Use_GPS == true)
     RTC_Disable(Enable_SerialPrint_RTC); delay(100);
     GNSS.GPS_ON(Enable_SerialPrint_GPS); delay(100);
-    GNSS.GPS_ReadUpdate( GPS_TimerON, &GPS_Latitude, &GPS_Longitude, &GPS_NbSatellites, &Date, Enable_SerialPrint_GPS); delay(100);
+    GNSS.GPS_ReadUpdate( GPS_TimerON, &GPS_Latitude, &GPS_Longitude, &GPS_NbSatellites, &GPS_EHPE, &Date, Enable_SerialPrint_GPS); delay(100);
     GNSS.GPS_OFF(Enable_SerialPrint_GPS); delay(100);
     RTC_Enable(Enable_SerialPrint_RTC);
     delay(1000) ;
@@ -351,28 +360,22 @@ void LoRa_SendPayload( bool Enable_SerialPrint_LoRa ) {
 
     LoRaWAN_Busy = 0 ; LoRaWAN_Joined = 1 ;
 
-    CayenneLPPayload.reset(); // Reset writing payload
+    MyLPPayload.reset(); // Reset writing payload
 
-    CayenneLPPayload.addTemperature( 1 , STM32_Temperature_float ) ;
-    CayenneLPPayload.addBatteryLevel( 2 , BatteryTension ) ;
-    float Acc_X = 1.0 ;
-    float Acc_Y = 2.0 ;
-    float Acc_Z = 3.0 ;
-    float LIS2DWS12_Temperature = 25.0 ;
-    CayenneLPPayload.addAccelerometer_And_Temperature( 3 , Acc_X, Acc_Y, Acc_Z, LIS2DWS12_Temperature)          ; // add Accelerometer
+    MyLPPayload.addTemperature( STM32_Temperature_float ) ;
+    MyLPPayload.addBatteryLevel( BatteryTension ) ;
     
     #if( Use_Acc == true )
-    // CayenneLPPayload.addTemperature( 3 , LIS2DWS12_Temperature ) ; 
-    // CayenneLPPayload.addAccelerometer( 3 , Acc_X, Acc_Y, Acc_Z)          ; // add Accelerometer
-    CayenneLPPayload.addAccelerometer_And_Temperature( 3 , Acc_X, Acc_Y, Acc_Z, LIS2DWS12_Temperature)          ; // add Accelerometer
+    MyLPPayload.addAccelerometer( (float)Acc_X, (float)Acc_Y, (float)Acc_Z ) ; // add Accelerometer
+    MyLPPayload.addTemperature( LIS2DWS12_Temperature ) ;
     #endif
     #if( Use_GPS == true )
-    // double GPS_Latitude = 43.123456 ; 
-    // double GPS_Longitude = 3.123456 ;
-    CayenneLPPayload.addGPS( 4 , (float)GPS_Latitude , (float)GPS_Longitude ) ; 
+    MyLPPayload.addGPS( (float)GPS_Latitude , (float)GPS_Longitude ) ; 
+    MyLPPayload.addDigit( GPS_NbSatellites ) ;
+    MyLPPayload.addDigit( GPS_EHPE ) ;
     #endif
   
-    LoRaWAN.sendPacket(CayenneLPPayload.getBuffer(), CayenneLPPayload.getSize());
+    LoRaWAN.sendPacket(MyLPPayload.getBuffer(), MyLPPayload.getSize());
 
     if( Enable_SerialPrint_LoRa == true ){ 
       Serial.println( (String)"LoRaWAN: Busy   " + LoRaWAN_Busy )   ; // Display state of LoRa - 0 for false (= available) - 1 for true (= busy)
