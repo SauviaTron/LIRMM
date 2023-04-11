@@ -466,12 +466,14 @@ void STM32L0Class::Battery_Config( bool Enable_SerialPrint_Battery ){
  */
 float STM32L0Class::Battery_GetTension(bool Enable_SerialPrint_Battery){
 
-  float VDDA = getVDDA();
-  float BatteryTension = 1.27f * VDDA * ((float)analogRead(Battery_Pin_ADC)) / 4096.0f;
+    float VDDA = getVDDA();
+    digitalWrite(Battery_Pin_Monitor, HIGH);
+    float BatteryTension = 1.27f * VDDA * ((float)analogRead(Battery_Pin_ADC)) / 4096.0f;
+    digitalWrite(Battery_Pin_Monitor, LOW);
 
-  if( Enable_SerialPrint_Battery == true ){ Serial.print( ".        Battery : ") ; Serial.print(BatteryTension, 2) ; Serial.println(" V") ; }
+    if( Enable_SerialPrint_Battery == true ){ Serial.print( ".        Battery : ") ; Serial.print(BatteryTension, 2) ; Serial.println(" V") ; }
 
-  return BatteryTension ;
+    return BatteryTension ;
 
 }
 
