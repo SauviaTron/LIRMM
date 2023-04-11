@@ -18,12 +18,12 @@
 #define LIS2DW12_intPin2    3    // interrupt2 pin definitions, data ready or sleep interrupt
 // Specify sensor parameters //
 LPMODE   lpMode = LIS2DW12_LP_MODE_1;      // choices are low power modes 1, 2, 3, or 4
-MODE     mode   = LIS2DW12_MODE_LOW_POWER; // choices are low power, high performance, and one shot modes
+MODE     mode   = LIS2DW12_MODE_HIGH_PERF; // choices are low power, high performance, and one shot modes
 ODR      odr    = LIS2DW12_ODR_12_5_1_6HZ; //  1.6 Hz in lpMode, max is 200 Hz in LpMode
 FS       fs     = LIS2DW12_FS_2G;          // choices are 2, 4, 8, or 16 g
 BW_FILT  bw     = LIS2DW12_BW_FILT_ODR2;   // choices are ODR divided by 2, 4, 10, or 20
 FIFOMODE fifoMode = BYPASS;                // capture 32 samples of data before wakeup event, about 2 secs at 25 Hz
-bool lowNoise = false;                     // low noise or lowest power
+bool lowNoise = true;                     // low noise or lowest power
 float aRes = 0;         // Sensor data scale in mg/LSB
 int16_t accelCount[3];  // Stores the 16-bit signed accelerometer sensor output
 // int16_t LIS2DWS12_Temp_Raw;      // temperature raw count output
@@ -345,9 +345,10 @@ void LIS2DW12::Acc_Get_XYZ_Data( float *Acc_X , float *Acc_Y, float *Acc_Z, bool
   *Acc_Z = (float)accelCount[2]*aRes - offset[2]; 
     
   if( Enable_SerialPrint_Acc == true ){
-    Serial.println( (String)".             - Acc_X = " + (int)1000* (*Acc_X) + (String)"mg - Offset : " + offset[0] + (String)"mg") ; 
-    Serial.println( (String)".             - Acc_Y = " + (int)1000* (*Acc_Y) + (String)"mg - Offset : " + offset[1] + (String)"mg") ;
-    Serial.println( (String)".             - Acc_Z = " + (int)1000* (*Acc_Z) + (String)"mg - Offset : " + offset[2] + (String)"mg") ;
+    // Serial.println( (String)".             - Acc_X = " + (int)1000* (*Acc_X) + (String)"mg - Offset : " + offset[0] + (String)"mg") ; 
+    // Serial.println( (String)".             - Acc_Y = " + (int)1000* (*Acc_Y) + (String)"mg - Offset : " + offset[1] + (String)"mg") ;
+    // Serial.println( (String)".             - Acc_Z = " + (int)1000* (*Acc_Z) + (String)"mg - Offset : " + offset[2] + (String)"mg") ;
+    Serial.println( (String)" Axis X : " + (int)1000* (*Acc_X) + (String)"mg \t" + (String)" Axis Y : " + (int)1000* (*Acc_Y) + (String)"mg \t" + (String)" Axis Z : " + (int)1000* (*Acc_Z) + (String)"mg") ;
   }
   
 }
