@@ -79,8 +79,8 @@ void setup(){
 
   STM32L0.BlueLED_OFF( Enable_SerialPrint_LED ) ;
 
-  RTC_Config( Enable_SerialPrint_RTC ) ;
-  RTC_Enable( Enable_SerialPrint_RTC ) ;
+  // RTC_Config( Enable_SerialPrint_RTC ) ;
+  // RTC_Enable( Enable_SerialPrint_RTC ) ;
 
 } // void setup()
 
@@ -92,28 +92,30 @@ void loop() {
   
 //  Serial.println( (String)"STM32L0.resetCause() : " + STM32L0.resetCause() );
 
-  if (RTC_Alarm_Flag == true){
-    RTC_Alarm_Flag = false;
+  // if (RTC_Alarm_Flag == true){
+  //   RTC_Alarm_Flag = false;
 
-    delay( 1000 ) ;
+    delay( 100 ) ;
 
     STM32_Temperature_float = STM32L0.STM32_Temperature( Enable_SerialPrint_STM32 ) ;
 
-    delay( 1000 ) ;
+    delay( 100 ) ;
 
     BatteryTension = STM32L0.Battery_GetTension( Enable_SerialPrint_Battery ) ;
+    Serial.println( (String)"VDAA: " + STM32L0.getVDDA() );
+    Serial.println( (String)"VBAT: " + STM32L0.getVBAT() );
 
-    delay( 1000 ) ;
+    delay( 100 ) ;
 
     STM32L0.BlueLED_ON( Enable_SerialPrint_LED ) ;
     delay(500);
     STM32L0.BlueLED_OFF( Enable_SerialPrint_LED ) ;
 
-    delay( 1000 );
+    delay( 500 );
 
-  } // if( RTC_Alarm_Flag == true )
+  // } // if( RTC_Alarm_Flag == true )
 
-  STM32_Sleeping = STM32L0.STM32_StopMode(Enable_SerialPrint_STM32);
+  // STM32_Sleeping = STM32L0.STM32_StopMode(Enable_SerialPrint_STM32);
 
 } // void loop()
 
@@ -145,7 +147,7 @@ void RTC_Config( bool Enable_SerialPrint_RTC ){
  *
  */
 void RTC_Enable( bool Enable_SerialPrint_RTC ){
-  RTC.enableAlarm(RTC.MATCH_Every_10s)         ; // Alarm once per second
+  RTC.enableAlarm(RTC.MATCH_Every_30s)         ; // Alarm once per second
   if(Enable_SerialPrint_RTC == true ){ Serial.println("RTC enable.") ; };
 }
 

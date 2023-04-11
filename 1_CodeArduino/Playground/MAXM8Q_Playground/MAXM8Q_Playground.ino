@@ -47,7 +47,7 @@ int  RTC_Timer_Rescue = 100  ;
 
 /* >>> MAX M8Q - GPS <<< */
 
-int GPS_TimerON = 45 ;
+int GPS_TimerON = 65 ;
 double GPS_Longitude, GPS_Latitude ;
 unsigned int GPS_NbSatellites ;
 uint32_t Date ;
@@ -154,7 +154,7 @@ void RTC_Config( bool Enable_SerialPrint_RTC ){
  *
  */
 void RTC_Enable( bool Enable_SerialPrint_RTC ){
-  RTC.enableAlarm(RTC.MATCH_SS)         ; // Alarm once per second
+  RTC.enableAlarm(RTC.MATCH_Every_90s)         ; // Alarm once per second
   if(Enable_SerialPrint_RTC == true ){ Serial.println("RTC enable.") ; };
 }
 

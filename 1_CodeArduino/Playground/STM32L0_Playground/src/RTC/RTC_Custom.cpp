@@ -504,6 +504,13 @@ void RTCClass::SyncAlarm()
                 _alarm_calendar.hours = calendar.hours;
                 _alarm_calendar.minutes = calendar.minutes;
                 break;
+            case MATCH_Every_5min:  // Every 5Minute
+                _alarm_calendar.year = calendar.year;
+                _alarm_calendar.month = calendar.month;
+                _alarm_calendar.day = calendar.day;
+                _alarm_calendar.hours = calendar.hours;
+                _alarm_calendar.minutes = calendar.minutes;
+                break;
             case MATCH_MMSS: // Every Hour
                 _alarm_calendar.year = calendar.year;
                 _alarm_calendar.month = calendar.month;
@@ -611,17 +618,25 @@ void RTCClass::AdvanceAlarm()
         _alarm_calendar.minutes = calendar.minutes  ;
         stm32l0_rtc_calendar_offset(&_alarm_calendar, 120, 0, &_alarm_calendar);
         break;
+    case MATCH_Every_5min: // Every Second
+        _alarm_calendar.year    = calendar.year     ;
+        _alarm_calendar.month   = calendar.month    ;
+        _alarm_calendar.day     = calendar.day      ;
+        _alarm_calendar.hours   = calendar.hours    ;
+        _alarm_calendar.minutes = calendar.minutes  ;
+        stm32l0_rtc_calendar_offset(&_alarm_calendar, 300, 0, &_alarm_calendar);
+        break;
     case MATCH_MMSS: // Every Hour
-	_alarm_calendar.year = calendar.year;
-	_alarm_calendar.month = calendar.month;
-	_alarm_calendar.day = calendar.day;
-	_alarm_calendar.hours = calendar.hours;
-	stm32l0_rtc_calendar_offset(&_alarm_calendar, 3600, 0, &_alarm_calendar);
+        _alarm_calendar.year = calendar.year;
+        _alarm_calendar.month = calendar.month;
+        _alarm_calendar.day = calendar.day;
+        _alarm_calendar.hours = calendar.hours;
+        stm32l0_rtc_calendar_offset(&_alarm_calendar, 3600, 0, &_alarm_calendar);
         break;
     case MATCH_HHMMSS: // Every Day
-	_alarm_calendar.year = calendar.year;
-	_alarm_calendar.month = calendar.month;
-	_alarm_calendar.day = calendar.day;
+        _alarm_calendar.year = calendar.year;
+        _alarm_calendar.month = calendar.month;
+        _alarm_calendar.day = calendar.day;
         stm32l0_rtc_calendar_offset(&_alarm_calendar, 86400, 0, &_alarm_calendar);
         break;
     case MATCH_DHHMMSS: // Every Month
