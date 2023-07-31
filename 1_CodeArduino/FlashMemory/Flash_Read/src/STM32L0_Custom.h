@@ -72,7 +72,9 @@ public:
     bool     flashProgram(uint32_t address, const void *data, uint32_t count);
     bool     flashRead( uint32_t address, uint8_t *data, uint32_t count);
 
-    void Flash_Print_Data( uint8_t *data, uint32_t count ) ;
+    void Flash_Print_Data( uint32_t address, uint8_t *data, uint32_t count ) ;
+
+    void Flash_Decode_Data( uint32_t address, uint8_t *data, uint8_t *previousdata,uint32_t count , int Board_Name_Figure , int Data_Read) ;
 
     void BlueLED_Config( bool Enable_SerialPrint_LED );
     void BlueLED_ON( bool Enable_SerialPrint_LED );

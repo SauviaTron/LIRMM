@@ -216,6 +216,7 @@ bool STM32L0Class::flashErase(uint32_t address, uint32_t count)
     count = (count + 127) & ~127;
 
     if ((address < FLASHSTART) || ((address + count) > FLASHEND)) {
+    Serial.println( "Flash    Fail to erase" ) ;
 	return false;
     }
 
@@ -223,6 +224,7 @@ bool STM32L0Class::flashErase(uint32_t address, uint32_t count)
     stm32l0_flash_erase(address, count);
     stm32l0_flash_lock();
     
+    Serial.print( "Flash address : 0x"); Serial.print(address,HEX); Serial.println( "\t Erase succeded" ) ;
     return true;
 }
 
@@ -257,6 +259,76 @@ bool STM32L0Class::flashRead( uint32_t address, uint8_t *data, uint32_t count)
 
 }
 
+/**
+ * @brief STM32L0 - Flash display data
+ *
+ * @param address Flash address of the data
+ * @param data Variable that contain the data stored
+ * @param count Number of data that you want to read
+ * 
+ */
+void STM32L0Class::Flash_Print_Data( uint32_t address, uint8_t *data, uint32_t count ){
+
+    int Nb_Data_Display = 0 ;
+    int Flash_Nb_Cell = 1 ;
+
+    for (int i = 0; i < count; i++) {
+      
+        if( Nb_Data_Display == 0 ){ 
+
+            Serial.print( "Flash address : 0x" ) ; Serial.print( address, HEX ) ; Serial.print("\t") ;
+            address = address + 4 ;
+            Flash_Nb_Cell += 1 ; 
+
+        //   if( Flash_Nb_Cell <= 9 ){
+        //     Serial.print( (String)"Cell n 0" + Flash_Nb_Cell) ; Serial.print("\t") ;
+        //     Flash_Nb_Cell += 1 ; 
+        //   }
+        //   else{
+        //     Serial.print( (String)"Cell n " + Flash_Nb_Cell) ; Serial.print("\t") ;
+        //     Flash_Nb_Cell += 1 ; 
+        //   }
+
+        }
+        
+        String data_i_string = String( data[i] , BIN ) ;
+        // Serial.println( (String)"Taille string : " + data_i_string ) ; 
+        switch( data_i_string.length() ){
+          case 8 :
+            Serial.print(data[i], BIN); Serial.print(" ");
+            break ;
+          case 7 :
+            Serial.print( "0" ) ; Serial.print(data[i], BIN); Serial.print(" ");
+            break ;
+          case 6 :
+            Serial.print( "00" ) ; Serial.print(data[i], BIN); Serial.print(" ");
+            break ;
+          case 5 :
+            Serial.print( "000" ) ; Serial.print(data[i], BIN); Serial.print(" ");
+            break ;
+          case 4 :
+            Serial.print( "0000" ) ; Serial.print(data[i], BIN); Serial.print(" ");
+            break ;
+          case 3 :
+            Serial.print( "00000" ) ; Serial.print(data[i], BIN); Serial.print(" ");
+            break ;
+          case 2 :
+            Serial.print( "000000" ) ; Serial.print(data[i], BIN); Serial.print(" ");
+            break ;
+          case 1 :
+            Serial.print( "0000000" ) ; Serial.print(data[i], BIN); Serial.print(" ");
+            break ;
+        } // switch( data_i_string.length() )
+
+        Nb_Data_Display += 1 ;
+        
+        if( Nb_Data_Display == 4 ){
+          Serial.println(" "); 
+          Nb_Data_Display = 0 ;
+        }
+
+    }
+}
 
 /**
  * @brief STM32L0 - Wake-up the microcontroller
@@ -464,12 +536,14 @@ void STM32L0Class::Battery_Config( bool Enable_SerialPrint_Battery ){
  */
 float STM32L0Class::Battery_GetTension(bool Enable_SerialPrint_Battery){
 
-  float VDDA = getVDDA();
-  float BatteryTension = 1.27f * VDDA * ((float)analogRead(Battery_Pin_ADC)) / 4096.0f;
+    float VDDA = getVDDA();
+    digitalWrite(Battery_Pin_Monitor, HIGH);
+    float BatteryTension = 1.27f * VDDA * ((float)analogRead(Battery_Pin_ADC)) / 4096.0f;
+    digitalWrite(Battery_Pin_Monitor, LOW);
 
-  if( Enable_SerialPrint_Battery == true ){ Serial.print( ".        Battery : ") ; Serial.print(BatteryTension, 2) ; Serial.println(" V") ; }
+    if( Enable_SerialPrint_Battery == true ){ Serial.print( ".        Battery : ") ; Serial.print(BatteryTension, 2) ; Serial.println(" V") ; }
 
-  return BatteryTension ;
+    return BatteryTension ;
 
 }
 

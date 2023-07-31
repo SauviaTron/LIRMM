@@ -72,6 +72,8 @@ public:
     bool     flashProgram(uint32_t address, const void *data, uint32_t count);
     bool     flashRead( uint32_t address, uint8_t *data, uint32_t count);
 
+    void Flash_Print_Data( uint32_t address, uint8_t *data, uint32_t count ) ;
+
     bool STM32_WakeUp( bool Enable_SerialPrint_STM32 );
     bool STM32_StopMode( bool Enable_SerialPrint_STM32 ) ;
     float STM32_Temperature( bool Enable_SerialPrint_STM32 );

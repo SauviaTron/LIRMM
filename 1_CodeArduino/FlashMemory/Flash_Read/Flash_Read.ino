@@ -20,9 +20,11 @@
 #include "src/Flash_ReadWrite.h" // Management of the 196k Flash of the STM32L082CZ
 
 #define Debug_Mode    true
+#define GNAT_L082CZ_  3
 
 //uint32_t address = 0x08021980; // adresse de départ de la mémoire flash
 uint8_t data[128]; // tableau pour stocker les données lues
+uint8_t previousdata[128]; // tableau pour stocker les données lues
 uint32_t count = 128; // nombre de données à lire
 
 uint32_t flashAddress = 0x08021980 ;
@@ -48,16 +50,26 @@ void setup() {
 
   Serial.print( "Flash ReadAddress : " ) ; Serial.println( 0x8021980 , HEX ) ;
 
-  int Page_Read = 0 ;
+  Serial.println("Board_Name ; Battery_Level ; Time_User ; GPS_Latitude ; GPS_Longitude ; GPS_NbSatellites ; Acc_Temp ; Acc_AxeX ; Acc_AxeY ; Acc_AxeZ ; Acc_Roll ; Acc_Pitch ; Acc_Yaw ") ;
+
+  int Data_Read = 1 ;
   //for( flashAddress = 0x08021980 ; flashAddress <= 0x0802FFFF ; flashAddress = flashAddress + 128){
-  int Flash_Page_Lim = flashAddress + 128 * 10 ;
-  for( flashAddress = 0x08021980 ; flashAddress <= Flash_Page_Lim ; flashAddress = flashAddress + 128){
-  STM32L0.flashRead(flashAddress, data, count);
-  STM32L0.Flash_Print_Data( data , count ) ;
-  Page_Read++ ;
-  Serial.println( (String)"Page read : " + Page_Read ) ;
-  delay(100) ;
+  int Flash_Page_Lim = flashAddress + 128 * 100 ;
+  //for( flashAddress = 0x08021980 ; flashAddress <= 0x08021980 + 128*5 ; flashAddress = flashAddress + 128){
+
+  //STM32L0.Flash_Print_Data( 0x08021980 , data , count ) ; Serial.println() ;  STM32L0.Flash_Print_Data( 0x08021980 - 128 , data , count ) ; Serial.println() ;
+
+  
+  for( flashAddress = 0x08021980 + 5*4; flashAddress <= Flash_Page_Lim ; flashAddress = flashAddress + 5*4){
+    STM32L0.flashRead(flashAddress, data, 5*4);
+    STM32L0.flashRead(flashAddress - 5*4, previousdata, 5*4);
+    //STM32L0.Flash_Print_Data( 0x08021980 , data , count ) ; STM32L0.Flash_Print_Data( 0x08021980 - 128 , data , count ) ; Serial.println()
+    STM32L0.Flash_Decode_Data( flashAddress, data , previousdata , 5*4 , GNAT_L082CZ_ , Data_Read ) ;
+    Data_Read++ ;
+    //Serial.println( (String)"Page read : " + Page_Read ) ;
+    delay(100) ;
   }
+  
 
   STM32L0.BlueLED_ON( false ) ;
 

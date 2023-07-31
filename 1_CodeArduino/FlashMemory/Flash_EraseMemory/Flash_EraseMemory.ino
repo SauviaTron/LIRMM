@@ -23,8 +23,8 @@
 uint8_t data[128]; // tableau pour stocker les données lues
 uint32_t count = 128; // nombre de données à lire
 
-uint32_t flashAddress = 0x08021980 ;
-uint32_t flashAddress_Updated ;
+uint32_t flashAddress       = 0x8021980 ;
+uint32_t flashAddress_limit = 0x802FFFF ; // flashAddress_Updated ;
 
 
 // —————————————————————————————————————————————————————————————————————————————————————————————— //
@@ -44,10 +44,16 @@ void setup() {
 
   delay(1000) ;
 
-  STM32L0.flashErase( flashAddress , 2 ) ;
+  for( flashAddress = 0x8021980 - 128 ; flashAddress <= flashAddress_limit ; flashAddress=flashAddress+128){
+    STM32L0.flashErase( flashAddress , 128 ) ;
+  }
 
-  STM32L0.BlueLED_ON( false ) ;
+  STM32L0.flashErase( 0x8021980 - 128 , 128 ) ; // Reset page where Address to stock the flashaddress where the last data has been written
+  //STM32L0.flashErase( flashAddress , 128 ) ; // Reset page that contain data
+  Flash_Push_to_Memory( (0x8021980)* 10  , 0x8021980 - 128 ) ; // Store a value of where to start. Doesn't work if not x10... Don't know why
 
+  STM32L0.flashRead( 0x08021980 - 128, data , 128 ) ;
+  STM32L0.Flash_Print_Data( 0x08021980 -128 , data, 128 );
 
 }
 
@@ -60,10 +66,7 @@ void setup() {
 
 void loop() {
 
-
-  
-  Serial.println("Hello Flash_Read.ino") ;
-
-  delay(10000) ;
+  STM32L0.BlueLED_ON( false )  ; delay( 500 ) ;
+  STM32L0.BlueLED_OFF( false ) ; delay( 500 ) ;
   
 }
