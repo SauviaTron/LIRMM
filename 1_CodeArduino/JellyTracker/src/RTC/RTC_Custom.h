@@ -42,11 +42,12 @@ public:
         MATCH_SS           =  4,      // Every Minute
         MATCH_Every_90s    =  5,      // Every 90 seconds
         MATCH_Every_2min   =  6,      // Every 2min
-        MATCH_MMSS         =  7,      // Every Hour
-        MATCH_HHMMSS       =  8,      // Every Day
-        MATCH_DHHMMSS      =  9,      // Every Month
-        MATCH_MMDDHHMMSS   = 10,      // Every Year
-        MATCH_YYMMDDHHMMSS = 11,      // Once, on a specific date and a specific time
+        MATCH_Every_5min   =  7,      // Every 5min
+        MATCH_MMSS         =  8,      // Every Hour
+        MATCH_HHMMSS       =  9,      // Every Day
+        MATCH_DHHMMSS      =  10,      // Every Month
+        MATCH_MMDDHHMMSS   =  11,      // Every Year
+        MATCH_YYMMDDHHMMSS =  12,      // Once, on a specific date and a specific time
     };
 
     RTCClass();

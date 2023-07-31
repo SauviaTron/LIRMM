@@ -703,6 +703,7 @@ void GNSSClass::GPS_OFF( bool Enable_SerialPrint_GPS ){
  * @brief GPS MAX M8Q - Read GPS signals.
  *
  * @param GPS_TimeON Time while the module searches for GPS signals
+ * @param GPS_EHPE_Lim
  * @param Lat GPS Latitude
  * @param Long GPS Longitude
  * @param NbSatellites GPS Number of satellites received
@@ -712,13 +713,16 @@ void GNSSClass::GPS_OFF( bool Enable_SerialPrint_GPS ){
  * @return Nothing BUT it's update the following values : Lat, Long, NbSatellites and Date.
  * 
  */
-void GNSSClass::GPS_ReadUpdate( int GPS_TimeON, double *Lat, double *Long, unsigned int *NbSatellites, float *EHPE, uint32_t *Date, bool Enable_SerialPrint_GPS ){
+void GNSSClass::GPS_ReadUpdate( int GPS_TimeON, float GPS_EHPE_Lim, double *Lat, double *Long, unsigned int *NbSatellites, float *EHPE, uint32_t *Date, int *Date_Second, bool Enable_SerialPrint_GPS ){
 
     GNSSLocation myLocation;
     GNSSSatellites mySatellites;
 
+    int Nb_Fix = 0 ;
+
     int now = millis() ;
-    while( (millis()-now) <= GPS_TimeON * 1000 ){
+    *EHPE = 999.99f;
+    while( ((millis()-now) <= GPS_TimeON * 1000) ){
 
         if( GNSS.location(myLocation) ){
 
@@ -736,6 +740,38 @@ void GNSSClass::GPS_ReadUpdate( int GPS_TimeON, double *Lat, double *Long, unsig
                 GPS_Hour   = myLocation.hours()   ;
                 GPS_Minute = myLocation.minutes() ;
                 GPS_Second = myLocation.seconds() ;
+
+                // GPS give UTC hour, need to add 1hour (winter) or 2hours (summer).
+                GPS_Hour += 2 ;
+
+                // Overtaking 24h
+                if ( GPS_Hour >= 24 ){ 
+                    
+                    GPS_Hour -= 24 ; 
+                    GPS_Day += 1 ; 
+
+                    // Overtaking day in month
+                    int daysInMonth = 31;  // Nombre de jours par défaut (pour les mois de 31 jours)
+
+                    if (GPS_Month == 2) {  // Février
+                        if ((GPS_Year % 4 == 0 && GPS_Year % 100 != 0) || GPS_Year % 400 == 0) {
+                        daysInMonth = 29;  // Année bissextile, février a 29 jours
+                        } else {
+                        daysInMonth = 28;  // Année non bissextile, février a 28 jours
+                        }
+                    } 
+                    else if (GPS_Month == 4 || GPS_Month == 6 || GPS_Month == 9 || GPS_Month == 11) {
+                        daysInMonth = 30;  // Avril, juin, septembre, novembre ont 30 jours
+                    }
+
+                    if (GPS_Day > daysInMonth) { 
+                        GPS_Day = 1; 
+                        GPS_Month += 1;
+                        // Gérer les dépassements de mois
+                        if (GPS_Month > 12) { GPS_Month = 1; GPS_Year += 1; }
+                    }
+
+                }
                 
                 Serial.print(fixQualityString[myLocation.fixQuality()]) ; Serial.print(" - ") ;
 
@@ -752,8 +788,10 @@ void GNSSClass::GPS_ReadUpdate( int GPS_TimeON, double *Lat, double *Long, unsig
                 Master_Date = Master_Date * 100 + GPS_Day    ; // Master_Date = 230200 + 23 = 230223
                 Master_Date = Master_Date * 100 + GPS_Hour   ; // Master_Date = 23022300 + 16 = 23022316
                 Master_Date = Master_Date * 100 + GPS_Minute ; // Master_Date = 2302231600 + 5 = 2302231605
+                // Master_Date = Master_Date * 100 + GPS_Second ; // Master_Date = 230223160500 + 48 = 230223160548 | Besoin d'un uint64 ... Compliqué à implémenter dans la flash
 
                 *Date = Master_Date ;
+                *Date_Second = GPS_Second ;
 
                 if( myLocation.fixType() != GNSSLocation::TYPE_TIME ){
 
@@ -767,7 +805,17 @@ void GNSSClass::GPS_ReadUpdate( int GPS_TimeON, double *Lat, double *Long, unsig
                     Serial.print(" - EHPE: "); Serial.print(*EHPE, 3) ; 
                     Serial.print(" - SATELLITES fixed: "); Serial.println(myLocation.satellites());
 
+                    Nb_Fix = Nb_Fix + 1 ;
+
                 } // if( myLocation.fixType() != GNSSLocation::TYPE_TIME )
+
+                // if( (*EHPE<=GPS_EHPE_Lim) && ((millis()-now)>25*1000) ){
+                //     break;
+                // }
+
+                if( (*EHPE<=GPS_EHPE_Lim) && (Nb_Fix>=25) ){
+                    break;
+                }
 
             } // if( myLocation.fixType() != GNSSLocation::TYPE_NONE )
 
@@ -777,7 +825,7 @@ void GNSSClass::GPS_ReadUpdate( int GPS_TimeON, double *Lat, double *Long, unsig
 
 }
 
-void GNSSClass::GPS_First_Fix( double *Lat, double *Long, unsigned int *NbSatellites, float *EHPE, uint32_t *Date, bool Enable_SerialPrint_GPS ){
+void GNSSClass::GPS_First_Fix( double *Lat, double *Long, unsigned int *NbSatellites, float *EHPE, uint32_t *Date, int *Date_Second, bool Enable_SerialPrint_GPS ){
 
     *EHPE = 999.99f;
 
@@ -785,7 +833,7 @@ void GNSSClass::GPS_First_Fix( double *Lat, double *Long, unsigned int *NbSatell
 
         *EHPE = 999.99f;
 
-        GPS_ReadUpdate( 10 , Lat, Long, NbSatellites, EHPE, Date, Enable_SerialPrint_GPS );
+        GPS_ReadUpdate( 10 , 25.0f, Lat, Long, NbSatellites, EHPE, Date, Date_Second, Enable_SerialPrint_GPS );
 
     } // while( EHPE >= 150.0 )
 

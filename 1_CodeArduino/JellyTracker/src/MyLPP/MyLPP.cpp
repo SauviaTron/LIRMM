@@ -308,12 +308,12 @@ uint8_t MyLPP::addDigit(uint8_t value) {
 //     return cursor;
 // }
 
-uint8_t MyLPP::addBatteryLevel(float celsius) {
+uint8_t MyLPP::addBatteryLevel(float BatterieTension) {
 
     if ((cursor + LPP_BatteryLevel_SIZE) > maxsize) {
         return 0;
     }
-    int16_t val = celsius * 10;
+    int16_t val = BatterieTension * 100;
 
     buffer[cursor++] = val >> 8; 
     buffer[cursor++] = val; 

@@ -193,8 +193,8 @@ public:
     void GPS_Config( bool Enable_SerialPrint_GPS );
     void GPS_ON( bool Enable_SerialPrint_GPS );
     void GPS_OFF( bool Enable_SerialPrint_GPS );
-    void GPS_ReadUpdate( int GPS_TimeON, double *Lat, double *Long, unsigned int *NbSatellites, float *EHPE, uint32_t *Date, bool Enable_SerialPrint_GPS );
-    void GPS_First_Fix( double *Lat, double *Long, unsigned int *NbSatellites, float *EHPE, uint32_t *Date, bool Enable_SerialPrint_GPS );
+    void GPS_ReadUpdate( int GPS_TimeON, float GPS_EHPE_Lim, double *Lat, double *Long, unsigned int *NbSatellites, float *EHPE, uint32_t *Date, int *Date_Second, bool Enable_SerialPrint_GPS );
+    void GPS_First_Fix( double *Lat, double *Long, unsigned int *NbSatellites, float *EHPE, uint32_t *Date, int *Date_Second, bool Enable_SerialPrint_GPS );
 
 private:
     Uart *_uart;

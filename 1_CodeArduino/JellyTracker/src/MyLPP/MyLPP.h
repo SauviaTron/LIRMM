@@ -71,7 +71,7 @@ class MyLPP {
         uint8_t addDigit(uint8_t value);
 
         //uint8_t addBatteryLevel(uint8_t channel, float celsius);
-        uint8_t addBatteryLevel(float celsius);
+        uint8_t addBatteryLevel(float BatterieTension);
     
     private:
         uint8_t *buffer;

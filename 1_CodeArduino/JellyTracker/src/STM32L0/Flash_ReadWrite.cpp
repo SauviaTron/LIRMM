@@ -118,7 +118,15 @@ uint32_t Flash_Create32bWord_w_24b_8b( int Value_1 , int Value_2 ){
   return (Value_1 << 8) | Value_2 ; // xxxxxxxx xxxxxxxx xxxxxxx yyyyyyyy
 }
 
-
+/**
+ * @brief STM32L0 - Store a data into the flash of the STM32
+ *
+ * @param Data_to_Store The data that you want to store
+ * @param flashAddress The location where you store the data
+ * 
+ * @warning Don't forget to not write on th flash address of your programm !
+ * 
+ */
 uint32_t Flash_Push_to_Memory( uint32_t Data_to_Store , uint32_t flashAddress ){
 
   uint32_t Data_to_Store_BigEndian = htonl( Data_to_Store ) ;

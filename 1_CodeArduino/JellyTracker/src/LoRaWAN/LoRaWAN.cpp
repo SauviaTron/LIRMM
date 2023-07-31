@@ -3580,7 +3580,7 @@ void LoRaWANClass::Config_And_JoinOTAA(const char *devEui, const char *appEui, c
     setTxPower(0);
     setSubBand(1); // 1 for MTCAP, 2 for TT gateways
 
-    joinOTAA(appEui, appKey, devEui);
+    //joinOTAA(appEui, appKey, devEui);
 
     if (Enable_SerialPrint_LoRa == true){
       Serial.println((String) "DevEUI: " + devEui);
@@ -3588,6 +3588,19 @@ void LoRaWANClass::Config_And_JoinOTAA(const char *devEui, const char *appEui, c
       Serial.println((String) "AppKey: " + appKey);
     }
 
+    Serial.println( "Trying to join LoRa" ) ;
+    int LoRa_Joined = 0 ;
+    while( LoRa_Joined == 0 ){
+
+      if( LoRaWAN.joinOTAA(appEui, appKey, devEui) != 0 ){ 
+        LoRa_Joined = 1 ; 
+        Serial.println( "LoRa joined" ) ;
+        }
+      else { 
+        Serial.println( "Fail to join LoRa..." ) ; 
+        delay( 30000 ) ;
+        }
+    }
 }
 
 LoRaWANClass LoRaWAN;
