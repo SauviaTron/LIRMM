@@ -10,16 +10,16 @@ close all ;
 clc ;
 
 
-Battery_Capacity = 155e-3                  ; % mAh - Capacity of one battery
-Battery_Capacity = Battery_Capacity * 2     ; % mAh - Capacity of the total battery
+Battery_Capacity = 500e-3                  ; % mAh - Capacity of one battery
+Battery_Capacity = Battery_Capacity * 1     ; % mAh - Capacity of the total battery
 Battery_Capacity = Battery_Capacity * 0.9; 
 
 Time_Running = 60 ; % [s]
-Every_X_Time = 1*60*24 ; % [min]
+Every_X_Time = 5 ; % [min]
 
 Add_Noise = false ;
 
-GNAT_32MHz_Run    = 36e-3   ; % [A]
+GNAT_32MHz_Run    = 40e-3   ; % [A]
 GNAT_32MHz_Sleep  = 1.65e-6 ; % [A]
 GNAT_16MHz_Run    = 32e-3   ; % [A]
 GNAT_16MHz_Sleep  = .783e-6 ; % [A]
