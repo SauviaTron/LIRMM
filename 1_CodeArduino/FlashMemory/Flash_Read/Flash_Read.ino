@@ -20,7 +20,7 @@
 #include "src/Flash_ReadWrite.h" // Management of the 196k Flash of the STM32L082CZ
 
 #define Debug_Mode    true
-#define GNAT_L082CZ_  3
+#define GNAT_L082CZ_  17
 
 //uint32_t address = 0x08021980; // adresse de départ de la mémoire flash
 uint8_t data[128]; // tableau pour stocker les données lues
