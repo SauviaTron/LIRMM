@@ -250,6 +250,15 @@ void LIS2DW12::deactivateNoMotionInterrupt()
   return temp;
   }
 
+
+/**
+ * @brief LIS2DW12 - Configuration
+ *
+ * @param Enable_SerialPrint_Acc If true, serial printing is enabled, otherwise disabled.
+ * 
+ * @warning During configuration, the accelerometer is calibrated. It is therefore important not to touch the board, to avoid any vibration and to lay it flat when this function is performed. 
+ *
+ */
 void LIS2DW12::Acc_Config( bool Enable_SerialPrint_Acc ){
 
   pinMode(LIS2DW12_intPin1, INPUT);  // define LIS2DW12 wake and sleep interrupt pins as L082 inputs
@@ -323,6 +332,16 @@ void LIS2DW12::Acc_Config( bool Enable_SerialPrint_Acc ){
 
 // }
 
+/**
+ * @brief LIS2DW12 - Get temperature data from the accelerometer
+ *
+ * @param LIS2DWS12_Temp_Raw    Raw temperature, coded on 8bits
+ * @param LIS2DWS12_Temperature Real temperature
+ * @param Enable_SerialPrint_Acc If true, serial printing is enabled, otherwise disabled.
+ * 
+ * @warning The variables are pointers. So this function returns no value but updates the variables set in arguments
+ *
+ */
 void LIS2DW12::Acc_Get_Temperature( int16_t *LIS2DWS12_Temp_Raw, float *LIS2DWS12_Temperature, bool Enable_SerialPrint_Acc ){
 
   *LIS2DWS12_Temp_Raw = _i2c_bus->readByte(LIS2DW12_ADDRESS, LIS2DW12_OUT_T);    // Read the raw data register 
@@ -335,6 +354,18 @@ void LIS2DW12::Acc_Get_Temperature( int16_t *LIS2DWS12_Temp_Raw, float *LIS2DWS1
 
 }
 
+
+/**
+ * @brief LIS2DW12 - Get accelerometer data
+ *
+ * @param Acc_X Acceleration along the x-axis
+ * @param Acc_Y Acceleration along the y-axis
+ * @param Acc_Z Acceleration along the z-axis
+ * @param Enable_SerialPrint_Acc If true, serial printing is enabled, otherwise disabled.
+ * 
+ * @warning The variables Acc_{X,Y,Z} are pointers. So this function returns no value but updates the variables set in arguments
+ *
+ */
 void LIS2DW12::Acc_Get_XYZ_Data( float *Acc_X , float *Acc_Y, float *Acc_Z, bool Enable_SerialPrint_Acc ){
 
   readAccelData(accelCount); // get 14-bit signed accel data
